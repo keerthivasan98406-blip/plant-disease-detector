@@ -72,7 +72,7 @@ export default function Home() {
             <h1 className="text-5xl sm:text-6xl font-black text-white leading-[1.1] mb-5">
               Leonux AI
               <br />
-              <span className="text-emerald-400">Disease Detection</span>
+              <span className="text-emerald-400">Plant Disease Detector</span>
             </h1>
 
             {/* Sub description */}
@@ -302,7 +302,7 @@ export default function Home() {
               </div>
               <div>
                 <span className="font-bold text-white text-lg">Leonux AI</span>
-                <p className="text-xs text-gray-500">Disease Detection</p>
+                <p className="text-xs text-gray-500">Plant Disease Detector</p>
               </div>
             </div>
             <div className="flex gap-8 text-sm">
@@ -310,7 +310,7 @@ export default function Home() {
               <Link to="/scanner" className="hover:text-white transition-colors">Scanner</Link>
               <Link to="/library" className="hover:text-white transition-colors">Library</Link>
             </div>
-            <p className="text-xs text-gray-600">© 2026 Leonux AI Disease Detection. Built for modern agriculture.</p>
+            <p className="text-xs text-gray-600">© 2026 Leonux AI Plant Disease Detector. Built for modern agriculture.</p>
           </div>
         </div>
       </footer>

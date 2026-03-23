@@ -37,7 +37,7 @@ export default function Navbar() {
             </div>
             <div>
               <span className="font-extrabold text-lg text-gray-900 leading-none">Leonux AI</span>
-              <p className="text-xs text-emerald-600 font-medium leading-none">Disease Detection</p>
+              <p className="text-xs text-emerald-600 font-medium leading-none">Plant Disease Detector</p>
             </div>
           </Link>
 
