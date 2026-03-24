@@ -9,7 +9,6 @@ import axios from 'axios'
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 type Mode = 'idle' | 'camera' | 'preview'
-type Lang = 'en' | 'ta'
 
 const tips = [
   'Ensure good lighting when capturing the image',
@@ -18,11 +17,8 @@ const tips = [
   'Include the full leaf clearly in the frame',
 ]
 
-const langLabels: Record<Lang, string> = { en: 'English', ta: 'தமிழ்' }
-
 export default function Scanner() {
   const [mode, setMode] = useState<Mode>('idle')
-  const [lang, setLang] = useState<Lang>('en')
   const [preview, setPreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [fileName, setFileName] = useState('')
@@ -119,7 +115,6 @@ export default function Scanner() {
 
       const formData = new FormData()
       formData.append('image', imageFile, imageFile.name)
-      formData.append('lang', lang)
 
       const response = await axios.post(`${API_BASE}/api/scan`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -181,25 +176,6 @@ export default function Scanner() {
             {/* ── IDLE ── */}
             {mode === 'idle' && (
               <div className="space-y-4">
-                {/* Language selector */}
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500 font-medium">Language:</span>
-                  <div className="flex rounded-xl overflow-hidden border border-gray-200">
-                    {(['en', 'ta'] as Lang[]).map(l => (
-                      <button
-                        key={l}
-                        onClick={() => setLang(l)}
-                        className={`px-4 py-1.5 text-sm font-semibold transition-colors ${
-                          lang === l
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-white text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        {langLabels[l]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 {/* Upload zone */}
                 <div
                   onDrop={onDrop}
@@ -315,9 +291,7 @@ export default function Scanner() {
                   <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-emerald-800">Advanced Plant Analysis</p>
-                    <p className="text-xs text-emerald-600 mt-0.5">
-                      Results will be in <span className="font-bold">{langLabels[lang]}</span> — our ML model identifies diseases, symptoms, treatment &amp; medicines
-                    </p>
+                    <p className="text-xs text-emerald-600 mt-0.5">Our ML model identifies diseases, symptoms, treatment &amp; medicines. Switch to தமிழ் on the results page.</p>
                   </div>
                 </div>
 
