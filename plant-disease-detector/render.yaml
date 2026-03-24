@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: plant-disease-detector-backend
+    runtime: node
+    rootDir: plant-disease-detector/backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: static
+    name: plant-disease-detector-frontend
+    rootDir: plant-disease-detector/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -114,20 +114,23 @@ export default function Scanner() {
     setLoading(true)
     setError('')
     try {
+      // Wake up backend first (Render free tier sleeps after inactivity)
+      try { await axios.get(`${API_BASE}/api/health`, { timeout: 10000 }) } catch {}
+
       const formData = new FormData()
       formData.append('image', imageFile, imageFile.name)
       formData.append('lang', lang)
 
       const response = await axios.post(`${API_BASE}/api/scan`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000
+        timeout: 90000
       })
       navigate(`/results/${response.data.id}`, { state: response.data })
     } catch (err: unknown) {
       let msg = 'Analysis failed. Please try again.'
       if (axios.isAxiosError(err)) {
         if (!err.response) {
-          msg = 'Cannot reach the server. Please check your connection or try again later.'
+          msg = 'Server is waking up — please wait 30 seconds and try again.'
         } else {
           msg = err.response.data?.error || `Server error ${err.response.status}. Please try again.`
         }
@@ -328,8 +331,7 @@ export default function Scanner() {
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>AI is analyzing your plant<span className="animate-pulse">...</span></span>
                     </>
-                  ) : (
-                    <>
+                  ) : (                    <>
                       <ScanLine className="w-5 h-5" />
                       Analyze with Leonux AI
                     </>
@@ -337,7 +339,7 @@ export default function Scanner() {
                 </button>
 
                 {loading && (
-                  <p className="text-center text-xs text-gray-400">This may take 10–30 seconds for accurate results</p>
+                  <p className="text-center text-xs text-gray-400">This may take 30–60 seconds — server may be waking up on first use</p>
                 )}
               </div>
             )}
