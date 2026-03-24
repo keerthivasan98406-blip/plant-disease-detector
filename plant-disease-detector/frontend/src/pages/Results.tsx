@@ -105,9 +105,6 @@ function useTTS() {
   return { speaking, translating, speak, stop }
 }
 
-  return { speaking, translating, speak, stop }
-}
-
 export default function Results() {
   const { state } = useLocation() as { state: ScanResult | null }
   const navigate = useNavigate()
