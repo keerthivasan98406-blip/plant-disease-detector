@@ -113,6 +113,8 @@ export default function Results() {
   const navigate = useNavigate()
   const { speaking, translating, speak } = useTTS()
   const [ttsLang, setTtsLang] = useState<'en' | 'ta'>('en')
+  const [translatingPage, setTranslatingPage] = useState(false)
+  const [taData, setTaData] = useState<typeof state['disease'] | null>(null)
 
   if (!state) {
     return (
@@ -123,7 +125,36 @@ export default function Results() {
     )
   }
 
-  const { disease, confidence, imageUrl, imageName, isHealthy } = state
+  const { disease: origDisease, confidence, imageUrl, imageName, isHealthy } = state
+
+  // Use translated data when in Tamil mode, else original
+  const disease = (ttsLang === 'ta' && taData) ? taData : origDisease
+
+  const switchLang = async (l: 'en' | 'ta') => {
+    setTtsLang(l)
+    if (l === 'ta' && !taData) {
+      setTranslatingPage(true)
+      try {
+        // Translate all text fields in parallel
+        const [name, plant, description, symptoms, treatment, prevention, medicines] = await Promise.all([
+          translateText(origDisease.name, 'ta'),
+          translateText(origDisease.plant, 'ta'),
+          translateText(origDisease.description, 'ta'),
+          Promise.all(origDisease.symptoms.map(s => translateText(s, 'ta'))),
+          Promise.all(origDisease.treatment.map(t => translateText(t, 'ta'))),
+          Promise.all(origDisease.prevention.map(p => translateText(p, 'ta'))),
+          Promise.all(origDisease.medicines.map(async m => ({
+            name: await translateText(m.name, 'ta'),
+            dosage: await translateText(m.dosage, 'ta'),
+            frequency: await translateText(m.frequency, 'ta'),
+          })))
+        ])
+        setTaData({ ...origDisease, name, plant, description, symptoms, treatment, prevention, medicines })
+      } finally {
+        setTranslatingPage(false)
+      }
+    }
+  }
 
   const severityBg: Record<string, string> = {
     High: 'from-red-900/80 via-red-800/60',
@@ -189,8 +220,8 @@ export default function Results() {
           <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-300 text-emerald-800 px-5 py-4 rounded-2xl mb-6">
             <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0" />
             <div>
-              <p className="font-bold text-sm">Your plant looks healthy!</p>
-              <p className="text-xs text-emerald-600 mt-0.5">No disease detected. Follow the prevention tips below to keep it that way.</p>
+              <p className="font-bold text-sm">{ttsLang === 'ta' ? 'உங்கள் தாவரம் ஆரோக்கியமாக உள்ளது!' : 'Your plant looks healthy!'}</p>
+              <p className="text-xs text-emerald-600 mt-0.5">{ttsLang === 'ta' ? 'நோய் கண்டறியப்படவில்லை. கீழே உள்ள தடுப்பு குறிப்புகளை பின்பற்றுங்கள்.' : 'No disease detected. Follow the prevention tips below to keep it that way.'}</p>
             </div>
           </div>
         )}
@@ -206,7 +237,7 @@ export default function Results() {
             <div className="flex-1">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Detected Disease</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{ttsLang === 'ta' ? 'கண்டறியப்பட்ட நோய்' : 'Detected Disease'}</p>
                   <h2 className="text-2xl font-extrabold text-gray-900">{disease.name}</h2>
                   <p className="text-emerald-600 font-semibold text-sm mt-1">{disease.plant}</p>
                 </div>
@@ -214,7 +245,7 @@ export default function Results() {
               </div>
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-gray-400">Confidence</span>
+                  <span className="text-xs text-gray-400">{ttsLang === 'ta' ? 'நம்பகத்தன்மை' : 'Confidence'}</span>
                   <span className="text-sm font-bold text-gray-700">{confidence}%</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2.5">
@@ -232,12 +263,13 @@ export default function Results() {
         {/* Language + TTS toggle */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <Volume2 className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-500 font-medium">Read aloud in:</span>
+          <span className="text-sm text-gray-500 font-medium">{ttsLang === 'ta' ? 'மொழி:' : 'Language:'}</span>
           <div className="flex rounded-xl overflow-hidden border border-gray-200">
             {(['en', 'ta'] as const).map(l => (
               <button
                 key={l}
-                onClick={() => { stop(); setTtsLang(l) }}
+                onClick={() => switchLang(l)}
+                disabled={translatingPage}
                 className={`px-4 py-1.5 text-sm font-semibold transition-colors ${
                   ttsLang === l
                     ? 'bg-emerald-600 text-white'
@@ -248,12 +280,10 @@ export default function Results() {
               </button>
             ))}
           </div>
-          <span className="text-xs text-gray-400">Click 🔊 on any card to listen</span>
-          {noTamilVoice && (
-            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
-              Tamil voice not found on this device — text will be translated but spoken in default voice
-            </span>
-          )}
+          {translatingPage
+            ? <span className="flex items-center gap-1.5 text-xs text-amber-600"><Loader2 className="w-3 h-3 animate-spin" /> தமிழில் மொழிபெயர்க்கிறது...</span>
+            : <span className="text-xs text-gray-400">{ttsLang === 'ta' ? '🔊 கேட்க கிளிக் செய்யுங்கள்' : 'Click 🔊 on any card to listen'}</span>
+          }
         </div>
 
         {/* Detail grid */}
@@ -265,8 +295,8 @@ export default function Results() {
               <div className="bg-amber-100 p-2 rounded-xl">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
               </div>
-              <h2 className="font-bold text-gray-900">Symptoms</h2>
-              <SpeakBtn id="symptoms" text={`Symptoms. ${disease.symptoms.join('. ')}`} />
+              <h2 className="font-bold text-gray-900">{ttsLang === 'ta' ? 'அறிகுறிகள்' : 'Symptoms'}</h2>
+              <SpeakBtn id="symptoms" text={`${ttsLang === 'ta' ? 'அறிகுறிகள்' : 'Symptoms'}. ${disease.symptoms.join('. ')}`} />
             </div>
             <ul className="space-y-2.5">
               {disease.symptoms.map((s, i) => (
@@ -284,8 +314,8 @@ export default function Results() {
               <div className="bg-emerald-100 p-2 rounded-xl">
                 <CheckCircle className="w-5 h-5 text-emerald-600" />
               </div>
-              <h2 className="font-bold text-gray-900">Treatment Steps</h2>
-              <SpeakBtn id="treatment" text={`Treatment Steps. ${disease.treatment.join('. ')}`} />
+              <h2 className="font-bold text-gray-900">{ttsLang === 'ta' ? 'சிகிச்சை படிகள்' : 'Treatment Steps'}</h2>
+              <SpeakBtn id="treatment" text={`${ttsLang === 'ta' ? 'சிகிச்சை படிகள்' : 'Treatment Steps'}. ${disease.treatment.join('. ')}`} />
             </div>
             <ol className="space-y-3">
               {disease.treatment.map((t, i) => (
@@ -305,8 +335,8 @@ export default function Results() {
               <div className="bg-blue-100 p-2 rounded-xl">
                 <Pill className="w-5 h-5 text-blue-600" />
               </div>
-              <h2 className="font-bold text-gray-900">Recommended Medicines</h2>
-              <SpeakBtn id="medicines" text={`Recommended Medicines. ${disease.medicines.map(m => `${m.name}, dosage ${m.dosage}, frequency ${m.frequency}`).join('. ')}`} />
+              <h2 className="font-bold text-gray-900">{ttsLang === 'ta' ? 'பரிந்துரைக்கப்பட்ட மருந்துகள்' : 'Recommended Medicines'}</h2>
+              <SpeakBtn id="medicines" text={`${ttsLang === 'ta' ? 'பரிந்துரைக்கப்பட்ட மருந்துகள்' : 'Recommended Medicines'}. ${disease.medicines.map(m => `${m.name}, ${ttsLang === 'ta' ? 'அளவு' : 'dosage'} ${m.dosage}, ${ttsLang === 'ta' ? 'அதிர்வெண்' : 'frequency'} ${m.frequency}`).join('. ')}`} />
             </div>
             <div className="space-y-3">
               {disease.medicines.map((m, i) => (
@@ -314,10 +344,10 @@ export default function Results() {
                   <p className="font-bold text-gray-900 text-sm">{m.name}</p>
                   <div className="flex flex-wrap gap-4 mt-2">
                     <span className="text-xs bg-white border border-blue-100 rounded-lg px-2 py-1 text-gray-600">
-                      Dosage: <span className="font-semibold text-gray-800">{m.dosage}</span>
+                      {ttsLang === 'ta' ? 'அளவு' : 'Dosage'}: <span className="font-semibold text-gray-800">{m.dosage}</span>
                     </span>
                     <span className="text-xs bg-white border border-blue-100 rounded-lg px-2 py-1 text-gray-600">
-                      Frequency: <span className="font-semibold text-gray-800">{m.frequency}</span>
+                      {ttsLang === 'ta' ? 'அதிர்வெண்' : 'Frequency'}: <span className="font-semibold text-gray-800">{m.frequency}</span>
                     </span>
                   </div>
                 </div>
@@ -331,8 +361,8 @@ export default function Results() {
               <div className="bg-green-100 p-2 rounded-xl">
                 <ShieldCheck className="w-5 h-5 text-green-600" />
               </div>
-              <h2 className="font-bold text-gray-900">Prevention Tips</h2>
-              <SpeakBtn id="prevention" text={`Prevention Tips. ${disease.prevention.join('. ')}`} />
+              <h2 className="font-bold text-gray-900">{ttsLang === 'ta' ? 'தடுப்பு குறிப்புகள்' : 'Prevention Tips'}</h2>
+              <SpeakBtn id="prevention" text={`${ttsLang === 'ta' ? 'தடுப்பு குறிப்புகள்' : 'Prevention Tips'}. ${disease.prevention.join('. ')}`} />
             </div>
             <ul className="space-y-2.5">
               {disease.prevention.map((p, i) => (
