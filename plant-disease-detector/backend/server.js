@@ -160,48 +160,80 @@ app.post('/api/pest', upload.single('image'), async (req, res) => {
     const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
     const base64Image = imageBuffer.toString('base64')
 
-    const pestPrompt = `You are an expert agricultural entomologist AI. Examine this plant image for pests.
+    const pestPrompt = `You are an expert agricultural entomologist AI. Look at this image carefully.
 
-IMPORTANT: If no plant or pest is visible, respond with: NOT_A_PLANT
+This image may show:
+1. A pest/insect directly (grasshopper, aphid, whitefly, caterpillar, mite, etc.)
+2. A plant with pest damage
 
-Respond ONLY with this JSON (no markdown):
+Identify the pest and provide control advice.
+Only respond with NOT_A_PEST if the image is completely unrelated to agriculture (e.g. a car, building, food).
+
+Respond ONLY with valid JSON (no markdown, no extra text):
 {
-  "pest": "Exact pest name (e.g. Aphids, Whitefly, Spider Mites, Thrips, Mealybugs)",
-  "plant": "Plant species affected",
-  "description": "2-3 sentences about what you observe",
+  "pest": "Exact pest name",
+  "plant": "Affected crops or General crops",
+  "description": "2-3 sentences describing what you see",
   "severity": "Low or Medium or High",
   "damage": ["damage sign 1", "damage sign 2", "damage sign 3"],
   "control": ["control step 1", "control step 2", "control step 3"],
   "organic": ["organic remedy 1", "organic remedy 2", "organic remedy 3"],
   "chemicals": [
-    {"name": "pesticide name", "dosage": "e.g. 2ml per litre"},
-    {"name": "pesticide name", "dosage": "e.g. 1g per litre"}
+    {"name": "pesticide name", "dosage": "dosage amount"},
+    {"name": "pesticide name", "dosage": "dosage amount"}
   ]
 }`
 
-    const response = await fetch('https://api.ai.cc/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.AICC_API_KEY}` },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'user', content: [
-          { type: 'text', text: pestPrompt },
-          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'high' } }
-        ]}],
-        temperature: 0.1, max_tokens: 1000
-      })
-    })
-    const data = await response.json()
-    const content = data.choices?.[0]?.message?.content?.trim()
-    if (!content || content.includes('NOT_A_PLANT')) {
-      return res.status(422).json({ error: 'No plant or pest detected. Please upload a clear plant image.' })
+    const MODELS = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-vision-preview']
+    let content = null
+    let lastErr = null
+
+    for (const model of MODELS) {
+      try {
+        console.log(`Pest: trying model ${model}`)
+        const response = await fetch('https://api.ai.cc/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.AICC_API_KEY}` },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: pestPrompt },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'high' } }
+            ]}],
+            temperature: 0.1,
+            max_tokens: 1200
+          })
+        })
+        const data = await response.json()
+        const raw = data.choices?.[0]?.message?.content?.trim()
+        if (raw) { content = raw; console.log(`Pest: success with ${model}`); break }
+      } catch (e) {
+        lastErr = e
+        console.error(`Pest model ${model} failed:`, e.message)
+      }
     }
+
+    if (!content) {
+      return res.status(500).json({ error: `AI failed: ${lastErr?.message || 'No response'}` })
+    }
+
+    if (content.includes('NOT_A_PEST')) {
+      return res.status(422).json({ error: 'Could not identify a pest. Please upload a clearer image of the insect or affected plant.' })
+    }
+
     const cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
-    const result = JSON.parse(cleaned)
+    let result
+    try {
+      result = JSON.parse(cleaned)
+    } catch {
+      const match = cleaned.match(/\{[\s\S]*\}/)
+      if (match) result = JSON.parse(match[0])
+      else return res.status(500).json({ error: 'Invalid AI response format. Please try again.' })
+    }
     res.json(result)
   } catch (err) {
     console.error('Pest route error:', err.message)
-    res.status(500).json({ error: 'Pest analysis failed. Please try again.' })
+    res.status(500).json({ error: 'Pest analysis failed: ' + err.message })
   }
 })
 
