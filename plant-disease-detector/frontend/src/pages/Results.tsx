@@ -2,7 +2,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useCallback, useRef, useState, useEffect } from 'react'
 import { CheckCircle, Pill, ShieldCheck, AlertTriangle, ArrowLeft, Camera, ChevronRight, Leaf, Volume2, VolumeX, Loader2 } from 'lucide-react'
 import SeverityBadge from '../components/SeverityBadge'
-import { ScanResult } from '../types'
+import { ScanResult, Disease } from '../types'
 import { useLang } from '../context/LangContext'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -112,7 +112,7 @@ export default function Results() {
   const { speaking, translating, speak, stop } = useTTS()
   const { lang: ttsLang, isTamil } = useLang()
   const [translatingPage, setTranslatingPage] = useState(false)
-  const [taData, setTaData] = useState<typeof state['disease'] | null>(null)
+  const [taData, setTaData] = useState<Disease | null>(null)
 
   if (!state) {
     return (
@@ -149,7 +149,7 @@ export default function Results() {
   }, [ttsLang])
 
   // Use translated data when in Tamil mode, else original
-  const disease = (isTamil && taData) ? taData : origDisease
+  const disease: Disease = (isTamil && taData) ? taData : origDisease
 
   const severityBg: Record<string, string> = {
     High: 'from-red-900/80 via-red-800/60',
