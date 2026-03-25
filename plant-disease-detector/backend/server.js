@@ -4,6 +4,7 @@ import cors from 'cors'
 import multer from 'multer'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { analyzeImageWithAI } from './ai/gemini.js'
 import { diseases } from './data/diseases.js'
@@ -147,6 +148,60 @@ app.post('/api/scan', upload.single('image'), async (req, res) => {
       isHealthy: false,
       timestamp: new Date().toISOString()
     })
+  }
+})
+
+// POST /api/pest — identify pests from image
+app.post('/api/pest', upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image provided' })
+  try {
+    const imageBuffer = fs.readFileSync(req.file.path)
+    const ext = path.extname(req.file.path).replace('.', '').toLowerCase()
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+    const base64Image = imageBuffer.toString('base64')
+
+    const pestPrompt = `You are an expert agricultural entomologist AI. Examine this plant image for pests.
+
+IMPORTANT: If no plant or pest is visible, respond with: NOT_A_PLANT
+
+Respond ONLY with this JSON (no markdown):
+{
+  "pest": "Exact pest name (e.g. Aphids, Whitefly, Spider Mites, Thrips, Mealybugs)",
+  "plant": "Plant species affected",
+  "description": "2-3 sentences about what you observe",
+  "severity": "Low or Medium or High",
+  "damage": ["damage sign 1", "damage sign 2", "damage sign 3"],
+  "control": ["control step 1", "control step 2", "control step 3"],
+  "organic": ["organic remedy 1", "organic remedy 2", "organic remedy 3"],
+  "chemicals": [
+    {"name": "pesticide name", "dosage": "e.g. 2ml per litre"},
+    {"name": "pesticide name", "dosage": "e.g. 1g per litre"}
+  ]
+}`
+
+    const response = await fetch('https://api.ai.cc/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.AICC_API_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: pestPrompt },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'high' } }
+        ]}],
+        temperature: 0.1, max_tokens: 1000
+      })
+    })
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content?.trim()
+    if (!content || content.includes('NOT_A_PLANT')) {
+      return res.status(422).json({ error: 'No plant or pest detected. Please upload a clear plant image.' })
+    }
+    const cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+    const result = JSON.parse(cleaned)
+    res.json(result)
+  } catch (err) {
+    console.error('Pest route error:', err.message)
+    res.status(500).json({ error: 'Pest analysis failed. Please try again.' })
   }
 })
 

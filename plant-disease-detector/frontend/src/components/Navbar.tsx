@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Microscope, BookOpen, Home } from 'lucide-react'
-
-const navLinks = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/scanner', label: 'Scanner', icon: Microscope },
-  { to: '/library', label: 'Library', icon: BookOpen },
-]
+import { Menu, X, Microscope, BookOpen, Home, Bug } from 'lucide-react'
+import { useLang } from '../context/LangContext'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
+  const { lang, setLang, isTamil } = useLang()
+
+  const navLinks = [
+    { to: '/', label: isTamil ? 'முகப்பு' : 'Home', icon: Home },
+    { to: '/scanner', label: isTamil ? 'ஸ்கேனர்' : 'Scanner', icon: Microscope },
+    { to: '/pest-finder', label: isTamil ? 'பூச்சி கண்டுபிடிப்பு' : 'Pest Finder', icon: Bug },
+    { to: '/library', label: isTamil ? 'நூலகம்' : 'Library', icon: BookOpen },
+  ]
 
   return (
     <nav className="bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-sm">
@@ -56,19 +59,51 @@ export default function Navbar() {
                 {label}
               </Link>
             ))}
+
+            {/* Language toggle switch */}
+            <div className="ml-3 flex items-center gap-2">
+              <span className={`text-xs font-semibold ${!isTamil ? 'text-emerald-700' : 'text-gray-400'}`}>EN</span>
+              <button
+                onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${
+                  isTamil ? 'bg-emerald-600' : 'bg-gray-300'
+                }`}
+                aria-label="Toggle language"
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${
+                  isTamil ? 'translate-x-6' : 'translate-x-0'
+                }`} />
+              </button>
+              <span className={`text-xs font-semibold ${isTamil ? 'text-emerald-700' : 'text-gray-400'}`}>தமிழ்</span>
+            </div>
+
             <Link to="/scanner" className="ml-3 btn-primary text-sm py-2 px-5">
-              Scan Now
+              {isTamil ? 'இப்போது ஸ்கேன் செய்' : 'Scan Now'}
             </Link>
           </div>
 
           {/* Mobile toggle */}
-          <button
-            className="md:hidden p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle menu"
-          >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="md:hidden flex items-center gap-3">
+            {/* Mobile language switch */}
+            <button
+              onClick={() => setLang(lang === 'en' ? 'ta' : 'en')}
+              className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${
+                isTamil ? 'bg-emerald-600' : 'bg-gray-300'
+              }`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${
+                isTamil ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+            <span className="text-xs font-bold text-gray-600">{isTamil ? 'தமிழ்' : 'EN'}</span>
+            <button
+              className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
+              onClick={() => setOpen(!open)}
+              aria-label="Toggle menu"
+            >
+              {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -96,7 +131,7 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
               className="btn-primary w-full flex items-center justify-center gap-2 text-sm"
             >
-              <Microscope className="w-4 h-4" /> Scan a Plant
+              <Microscope className="w-4 h-4" /> {isTamil ? 'இப்போது ஸ்கேன் செய்' : 'Scan a Plant'}
             </Link>
           </div>
         </div>

@@ -1,8 +1,9 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
 import { CheckCircle, Pill, ShieldCheck, AlertTriangle, ArrowLeft, Camera, ChevronRight, Leaf, Volume2, VolumeX, Loader2 } from 'lucide-react'
 import SeverityBadge from '../components/SeverityBadge'
 import { ScanResult } from '../types'
+import { useLang } from '../context/LangContext'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -108,8 +109,8 @@ function useTTS() {
 export default function Results() {
   const { state } = useLocation() as { state: ScanResult | null }
   const navigate = useNavigate()
-  const { speaking, translating, speak } = useTTS()
-  const [ttsLang, setTtsLang] = useState<'en' | 'ta'>('en')
+  const { speaking, translating, speak, stop } = useTTS()
+  const { lang: ttsLang, isTamil } = useLang()
   const [translatingPage, setTranslatingPage] = useState(false)
   const [taData, setTaData] = useState<typeof state['disease'] | null>(null)
 
@@ -124,34 +125,31 @@ export default function Results() {
 
   const { disease: origDisease, confidence, imageUrl, imageName, isHealthy } = state
 
-  // Use translated data when in Tamil mode, else original
-  const disease = (ttsLang === 'ta' && taData) ? taData : origDisease
-
-  const switchLang = async (l: 'en' | 'ta') => {
-    setTtsLang(l)
-    if (l === 'ta' && !taData) {
+  // Auto-translate when Tamil mode is activated
+  useEffect(() => {
+    if (ttsLang === 'ta' && !taData && origDisease) {
       setTranslatingPage(true)
-      try {
-        // Translate all text fields in parallel
-        const [name, plant, description, symptoms, treatment, prevention, medicines] = await Promise.all([
-          translateText(origDisease.name, 'ta'),
-          translateText(origDisease.plant, 'ta'),
-          translateText(origDisease.description, 'ta'),
-          Promise.all(origDisease.symptoms.map(s => translateText(s, 'ta'))),
-          Promise.all(origDisease.treatment.map(t => translateText(t, 'ta'))),
-          Promise.all(origDisease.prevention.map(p => translateText(p, 'ta'))),
-          Promise.all(origDisease.medicines.map(async m => ({
-            name: await translateText(m.name, 'ta'),
-            dosage: await translateText(m.dosage, 'ta'),
-            frequency: await translateText(m.frequency, 'ta'),
-          })))
-        ])
+      Promise.all([
+        translateText(origDisease.name, 'ta'),
+        translateText(origDisease.plant, 'ta'),
+        translateText(origDisease.description, 'ta'),
+        Promise.all(origDisease.symptoms.map(s => translateText(s, 'ta'))),
+        Promise.all(origDisease.treatment.map(t => translateText(t, 'ta'))),
+        Promise.all(origDisease.prevention.map(p => translateText(p, 'ta'))),
+        Promise.all(origDisease.medicines.map(async m => ({
+          name: await translateText(m.name, 'ta'),
+          dosage: await translateText(m.dosage, 'ta'),
+          frequency: await translateText(m.frequency, 'ta'),
+        })))
+      ]).then(([name, plant, description, symptoms, treatment, prevention, medicines]) => {
         setTaData({ ...origDisease, name, plant, description, symptoms, treatment, prevention, medicines })
-      } finally {
-        setTranslatingPage(false)
-      }
+      }).finally(() => setTranslatingPage(false))
     }
-  }
+    stop()
+  }, [ttsLang])
+
+  // Use translated data when in Tamil mode, else original
+  const disease = (isTamil && taData) ? taData : origDisease
 
   const severityBg: Record<string, string> = {
     High: 'from-red-900/80 via-red-800/60',
@@ -257,31 +255,13 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Language + TTS toggle */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Volume2 className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-500 font-medium">{ttsLang === 'ta' ? 'மொழி:' : 'Language:'}</span>
-          <div className="flex rounded-xl overflow-hidden border border-gray-200">
-            {(['en', 'ta'] as const).map(l => (
-              <button
-                key={l}
-                onClick={() => switchLang(l)}
-                disabled={translatingPage}
-                className={`px-4 py-1.5 text-sm font-semibold transition-colors ${
-                  ttsLang === l
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {l === 'en' ? 'English' : 'தமிழ்'}
-              </button>
-            ))}
+        {/* Translation loading indicator */}
+        {translatingPage && (
+          <div className="flex items-center gap-2 mb-6 text-amber-600 bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">தமிழில் மொழிபெயர்க்கிறது...</span>
           </div>
-          {translatingPage
-            ? <span className="flex items-center gap-1.5 text-xs text-amber-600"><Loader2 className="w-3 h-3 animate-spin" /> தமிழில் மொழிபெயர்க்கிறது...</span>
-            : <span className="text-xs text-gray-400">{ttsLang === 'ta' ? '🔊 கேட்க கிளிக் செய்யுங்கள்' : 'Click 🔊 on any card to listen'}</span>
-          }
-        </div>
+        )}
 
         {/* Detail grid */}
         <div className="grid md:grid-cols-2 gap-6">
