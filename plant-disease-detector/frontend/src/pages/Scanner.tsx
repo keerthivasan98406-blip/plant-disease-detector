@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Upload, Camera, X, Loader2, Leaf, AlertCircle,
@@ -16,6 +16,7 @@ export default function Scanner() {
   const { isTamil } = useLang()
   const t = (en: string, ta: string) => isTamil ? ta : en
   const [mode, setMode] = useState<Mode>('idle')
+  const [dragOver, setDragOver] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [fileName, setFileName] = useState('')
@@ -45,8 +46,22 @@ export default function Scanner() {
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
+    setDragOver(false)
     const file = e.dataTransfer.files?.[0]
     if (file && file.type.startsWith('image/')) handleFile(file)
+  }, [])
+
+  // Paste support — Ctrl+V anywhere on the page
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
+      if (item) {
+        const file = item.getAsFile()
+        if (file) handleFile(file)
+      }
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
   }, [])
 
   const startCamera = async () => {
@@ -161,8 +176,8 @@ export default function Scanner() {
 
             {mode === 'idle' && (
               <div className="space-y-4">
-                <div onDrop={onDrop} onDragOver={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()}
-                  className="relative border-2 border-dashed border-emerald-300 rounded-3xl p-14 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition-all duration-200 group overflow-hidden">
+                <div onDrop={onDrop} onDragOver={(e) => { e.preventDefault(); setDragOver(true) }} onDragLeave={() => setDragOver(false)} onClick={() => fileRef.current?.click()}
+                  className={`relative border-2 border-dashed rounded-3xl p-14 text-center cursor-pointer transition-all duration-200 group overflow-hidden ${dragOver ? 'border-emerald-500 bg-emerald-50 scale-[1.01]' : 'border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/50'}`}>
                   <Leaf className="absolute -bottom-6 -right-6 w-32 h-32 text-emerald-100 group-hover:text-emerald-200 transition-colors" />
                   <div className="relative">
                     <div className="bg-emerald-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-emerald-200 transition-colors">
@@ -170,6 +185,7 @@ export default function Scanner() {
                     </div>
                     <p className="text-lg font-bold text-gray-800 mb-1">{t('Drop your plant image here','உங்கள் தாவர படத்தை இங்கே போடுங்கள்')}</p>
                     <p className="text-sm text-gray-400">{t('or click to browse — JPG, PNG, WEBP supported','அல்லது கிளிக் செய்யுங்கள் — JPG, PNG, WEBP ஆதரிக்கப்படுகிறது')}</p>
+                    <p className="text-xs text-gray-300 mt-1">{t('You can also paste an image (Ctrl+V)','படத்தை ஒட்டலாம் (Ctrl+V)')}</p>
                   </div>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
                 </div>
