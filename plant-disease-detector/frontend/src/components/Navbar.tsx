@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Microscope, BookOpen, Home, Bug } from 'lucide-react'
+import { Menu, X, Microscope, BookOpen, Home, Bug, Cloud } from 'lucide-react'
 import { useLang } from '../context/LangContext'
 
 export default function Navbar() {
@@ -12,6 +12,7 @@ export default function Navbar() {
     { to: '/', label: isTamil ? 'முகப்பு' : 'Home', icon: Home },
     { to: '/scanner', label: isTamil ? 'ஸ்கேனர்' : 'Scanner', icon: Microscope },
     { to: '/pest-finder', label: isTamil ? 'பூச்சி கண்டுபிடிப்பு' : 'Pest Finder', icon: Bug },
+    { to: '/weather-risk', label: isTamil ? 'வானிலை அபாயம்' : 'Weather Risk', icon: Cloud },
     { to: '/library', label: isTamil ? 'நூலகம்' : 'Library', icon: BookOpen },
   ]
 
