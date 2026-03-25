@@ -44,47 +44,17 @@ app.post('/api/scan', upload.single('image'), async (req, res) => {
       const lang = req.body.lang || req.query.lang || 'en'
       aiResult = await analyzeImageWithAI(req.file.path, lang)
     } catch (aiErr) {
-      // If not a plant image, return a clear error to the user
+      // If not a plant image, return a clear error
       if (aiErr.code === 'NOT_A_PLANT' || aiErr.message === 'NOT_A_PLANT') {
         return res.status(422).json({
-          error: 'No plant detected. Please upload a clear photo of a plant leaf, stem, or crop. Human, animal, and object images are not supported.'
+          error: 'This image does not appear to contain a plant. Please upload a clear photo of a plant leaf, stem, or crop.'
         })
       }
-      console.error('AI failed, using fallback:', aiErr.message)
-      // Guaranteed fallback result
-      aiResult = {
-        disease: {
-          name: 'Late Blight',
-          plant: 'Tomato / Potato',
-          description: 'Late blight is caused by Phytophthora infestans. It spreads rapidly in cool, moist conditions and can destroy crops within days if untreated.',
-          severity: 'High',
-          symptoms: [
-            'Dark brown water-soaked lesions on leaves',
-            'White fuzzy mold on leaf undersides in humid conditions',
-            'Brown lesions on stems and petioles',
-            'Rapid wilting and plant collapse'
-          ],
-          treatment: [
-            'Remove and destroy all infected plant material immediately',
-            'Apply copper-based fungicide every 7-10 days',
-            'Improve air circulation by pruning dense foliage',
-            'Switch to drip irrigation to keep foliage dry'
-          ],
-          medicines: [
-            { name: 'Mancozeb 75% WP', dosage: '2.5g per litre', frequency: 'Every 7 days' },
-            { name: 'Copper Oxychloride', dosage: '3g per litre', frequency: 'Every 10 days' },
-            { name: 'Metalaxyl + Mancozeb', dosage: '2g per litre', frequency: 'Every 14 days' }
-          ],
-          prevention: [
-            'Use certified disease-free seeds and transplants',
-            'Rotate crops — avoid same spot for 3 years',
-            'Plant resistant varieties when available',
-            'Apply preventive fungicide before rainy periods'
-          ]
-        },
-        confidence: 78,
-        isHealthy: false
-      }
+      // Any other AI failure — return error, no fake fallback
+      console.error('AI scan failed:', aiErr.message)
+      return res.status(503).json({
+        error: 'AI analysis failed. Please try again with a clear plant image.'
+      })
     }
 
     const id = uuidv4()
@@ -122,32 +92,7 @@ app.post('/api/scan', upload.single('image'), async (req, res) => {
     })
   } catch (err) {
     console.error('Scan route outer error:', err.message)
-    // Even outer errors return a fallback result, never 500
-    const id = uuidv4()
-    const host = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`
-    const imageUrl = req.file ? `${host}/uploads/${req.file.filename}` : ''
-    res.json({
-      id,
-      imageName: req.file?.originalname || 'unknown',
-      imageUrl,
-      disease: {
-        id: uuidv4(),
-        name: 'Late Blight',
-        plant: 'Tomato / Potato',
-        description: 'Late blight is caused by Phytophthora infestans. It spreads rapidly in cool, moist conditions.',
-        severity: 'High',
-        symptoms: ['Dark brown water-soaked lesions on leaves', 'White fuzzy mold on leaf undersides', 'Brown lesions on stems', 'Rapid wilting'],
-        treatment: ['Remove infected plant material', 'Apply copper-based fungicide', 'Improve air circulation', 'Switch to drip irrigation'],
-        medicines: [
-          { name: 'Mancozeb 75% WP', dosage: '2.5g per litre', frequency: 'Every 7 days' },
-          { name: 'Copper Oxychloride', dosage: '3g per litre', frequency: 'Every 10 days' }
-        ],
-        prevention: ['Use certified disease-free seeds', 'Rotate crops every 3 years', 'Plant resistant varieties', 'Apply preventive fungicide']
-      },
-      confidence: 75,
-      isHealthy: false,
-      timestamp: new Date().toISOString()
-    })
+    res.status(500).json({ error: 'Scan failed. Please try again with a clear plant image.' })
   }
 })
 
