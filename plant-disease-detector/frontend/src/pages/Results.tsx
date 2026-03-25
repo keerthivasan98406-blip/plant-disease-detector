@@ -276,6 +276,7 @@ export default function Results() {
 
         {/* Detail grid — only show when not translating */}
         {!translatingPage && (
+        <div className="grid md:grid-cols-2 gap-6">
 
           {/* Symptoms */}
           <div className="card border-t-4 border-t-amber-400">
