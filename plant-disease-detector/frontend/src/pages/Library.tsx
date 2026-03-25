@@ -3,6 +3,7 @@ import { Search, Sprout, BookOpen, Lightbulb, AlertTriangle } from 'lucide-react
 import { Link } from 'react-router-dom'
 import { diseases } from '../data/diseases'
 import SeverityBadge from '../components/SeverityBadge'
+import { useLang } from '../context/LangContext'
 
 // Local images — downloaded and stored in /public for reliability
 const diseaseImages: Record<string, string> = {
@@ -41,7 +42,9 @@ const severityBorder: Record<string, string> = {
 }
 
 export default function Library() {
-  const [query, setQuery]               = useState('')
+  const { isTamil } = useLang()
+  const t = (en: string, ta: string) => isTamil ? ta : en
+  const [query, setQuery] = useState('')
   const [severityFilter, setSeverityFilter] = useState('All')
   const [expanded, setExpanded]         = useState<string | null>(null)
   const [tipIndex, setTipIndex]         = useState(0)
@@ -66,10 +69,10 @@ export default function Library() {
         <div className="absolute inset-0 flex items-center px-6 sm:px-12">
           <div>
             <div className="flex items-center gap-2 text-emerald-300 text-sm font-medium mb-2">
-              <BookOpen className="w-4 h-4" /> Knowledge Base
+              <BookOpen className="w-4 h-4" /> {t('Knowledge Base','அறிவுத் தளம்')}
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow">Diseases Library</h1>
-            <p className="text-emerald-100 mt-1 text-sm">Browse {diseases.length} plant diseases with full treatment info</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow">{t('Diseases Library','நோய்கள் நூலகம்')}</h1>
+            <p className="text-emerald-100 mt-1 text-sm">{t(`Browse ${diseases.length} plant diseases with full treatment info`,`${diseases.length} தாவர நோய்களை முழு சிகிச்சை தகவலுடன் உலாவுங்கள்`)}</p>
           </div>
         </div>
       </div>
@@ -83,14 +86,14 @@ export default function Library() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
           <div className="absolute inset-0 flex items-center px-8 gap-6">
             <div className="flex-1">
-              <p className="text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-1">Featured Disease</p>
+              <p className="text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-1">{t('Featured Disease','சிறப்பு நோய்')}</p>
               <h2 className="text-2xl font-extrabold text-white mb-1">{featured.name}</h2>
               <p className="text-gray-300 text-sm mb-3 line-clamp-2">{featured.description}</p>
               <SeverityBadge severity={featured.severity} />
             </div>
             <Link to="/scanner"
               className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-5 py-3 rounded-2xl text-sm transition-colors shadow-lg">
-              Scan Your Plant
+              {t('Scan Your Plant','உங்கள் தாவரத்தை ஸ்கேன் செய்')}
             </Link>
           </div>
         </div>
@@ -101,13 +104,13 @@ export default function Library() {
             <Lightbulb className="w-5 h-5 text-amber-600" />
           </div>
           <div className="flex-1">
-            <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-1">Did You Know?</p>
+            <p className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-1">{t('Did You Know?','உங்களுக்கு தெரியுமா?')}</p>
             <p className="text-sm text-amber-800">{tips[tipIndex]}</p>
           </div>
           <button
             onClick={() => setTipIndex((tipIndex + 1) % tips.length)}
             className="text-xs text-amber-600 hover:text-amber-800 font-semibold flex-shrink-0 mt-1 transition-colors">
-            Next tip →
+            {t('Next tip →','அடுத்த குறிப்பு →')}
           </button>
         </div>
 
@@ -118,21 +121,21 @@ export default function Library() {
             <div className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" placeholder="Search by disease or plant name..."
+                <input type="text" placeholder={t('Search by disease or plant name...','நோய் அல்லது தாவர பெயரால் தேடுங்கள்...')}
                   value={query} onChange={e => setQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white shadow-sm" />
               </div>
               <select value={severityFilter} onChange={e => setSeverityFilter(e.target.value)}
                 className="px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm bg-white shadow-sm">
-                <option value="All">All Severities</option>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
+                <option value="All">{t('All Severities','அனைத்து தீவிரங்கள்')}</option>
+                <option value="Low">{t('Low','குறைவு')}</option>
+                <option value="Medium">{t('Medium','நடுத்தரம்')}</option>
+                <option value="High">{t('High','அதிகம்')}</option>
               </select>
             </div>
 
             <p className="text-sm text-gray-400 mb-5 font-medium">
-              {filtered.length} disease{filtered.length !== 1 ? 's' : ''} found
+              {filtered.length} {t('disease','நோய்')}{filtered.length !== 1 ? (isTamil ? 'கள்' : 's') : ''} {t('found','கண்டறியப்பட்டது')}
             </p>
 
             {/* 2-column card grid */}
@@ -170,13 +173,13 @@ export default function Library() {
                     <button
                       onClick={() => setExpanded(expanded === disease.id ? null : disease.id)}
                       className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
-                      {expanded === disease.id ? 'Hide details ▲' : 'View details ▼'}
+                      {expanded === disease.id ? t('Hide details ▲','விவரங்களை மறை ▲') : t('View details ▼','விவரங்களை காண்க ▼')}
                     </button>
 
                     {expanded === disease.id && (
                       <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
                         <div>
-                          <p className="text-xs font-bold text-amber-600 mb-1.5">Symptoms</p>
+                          <p className="text-xs font-bold text-amber-600 mb-1.5">{t('Symptoms','அறிகுறிகள்')}</p>
                           <ul className="space-y-1">
                             {disease.symptoms.map((s, i) => (
                               <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
@@ -186,7 +189,7 @@ export default function Library() {
                           </ul>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-emerald-600 mb-1.5">Treatment</p>
+                          <p className="text-xs font-bold text-emerald-600 mb-1.5">{t('Treatment','சிகிச்சை')}</p>
                           <ul className="space-y-1">
                             {disease.treatment.map((t, i) => (
                               <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
@@ -196,7 +199,7 @@ export default function Library() {
                           </ul>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-blue-600 mb-1.5">Medicines</p>
+                          <p className="text-xs font-bold text-blue-600 mb-1.5">{t('Medicines','மருந்துகள்')}</p>
                           <div className="space-y-1.5">
                             {disease.medicines.map((m, i) => (
                               <div key={i} className="bg-blue-50 rounded-xl px-3 py-2">
@@ -207,7 +210,7 @@ export default function Library() {
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-green-600 mb-1.5">Prevention</p>
+                          <p className="text-xs font-bold text-green-600 mb-1.5">{t('Prevention','தடுப்பு')}</p>
                           <ul className="space-y-1">
                             {disease.prevention.map((p, i) => (
                               <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
@@ -225,7 +228,7 @@ export default function Library() {
               {filtered.length === 0 && (
                 <div className="col-span-2 text-center py-20 text-gray-400">
                   <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                  <p className="font-medium">No diseases found matching your search.</p>
+                  <p className="font-medium">{t('No diseases found matching your search.','உங்கள் தேடலுக்கு பொருந்தும் நோய்கள் எதுவும் இல்லை.')}</p>
                 </div>
               )}
             </div>
@@ -237,14 +240,14 @@ export default function Library() {
             <div className="card bg-emerald-50 border-emerald-100">
               <div className="flex items-center gap-2 mb-3">
                 <Sprout className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-gray-900 text-sm">Quick Stats</h3>
+                <h3 className="font-bold text-gray-900 text-sm">{t('Quick Stats','விரைவு புள்ளிவிவரங்கள்')}</h3>
               </div>
               <div className="space-y-3">
                 {[
-                  { label: 'Total Diseases', value: diseases.length },
-                  { label: 'High Severity',   value: diseases.filter(d => d.severity === 'High').length,   color: 'text-red-600' },
-                  { label: 'Medium Severity', value: diseases.filter(d => d.severity === 'Medium').length, color: 'text-amber-600' },
-                  { label: 'Low Severity',    value: diseases.filter(d => d.severity === 'Low').length,    color: 'text-emerald-600' },
+                  { label: t('Total Diseases','மொத்த நோய்கள்'), value: diseases.length },
+                  { label: t('High Severity','அதிக தீவிரம்'),   value: diseases.filter(d => d.severity === 'High').length,   color: 'text-red-600' },
+                  { label: t('Medium Severity','நடுத்தர தீவிரம்'), value: diseases.filter(d => d.severity === 'Medium').length, color: 'text-amber-600' },
+                  { label: t('Low Severity','குறைந்த தீவிரம்'),    value: diseases.filter(d => d.severity === 'Low').length,    color: 'text-emerald-600' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">{label}</span>
@@ -256,12 +259,12 @@ export default function Library() {
 
             {/* Severity legend */}
             <div className="card">
-              <h3 className="font-bold text-gray-900 text-sm mb-3">Severity Guide</h3>
+              <h3 className="font-bold text-gray-900 text-sm mb-3">{t('Severity Guide','தீவிர வழிகாட்டி')}</h3>
               <div className="space-y-2.5">
                 {[
-                  { level: 'High',   color: 'bg-red-100 text-red-700',     desc: 'Can destroy entire crop if untreated' },
-                  { level: 'Medium', color: 'bg-amber-100 text-amber-700', desc: 'Significant yield loss possible' },
-                  { level: 'Low',    color: 'bg-emerald-100 text-emerald-700', desc: 'Manageable with basic treatment' },
+                  { level: t('High','அதிகம்'),   color: 'bg-red-100 text-red-700',     desc: t('Can destroy entire crop if untreated','சிகிச்சையளிக்காவிட்டால் முழு பயிரையும் அழிக்கலாம்') },
+                  { level: t('Medium','நடுத்தரம்'), color: 'bg-amber-100 text-amber-700', desc: t('Significant yield loss possible','கணிசமான விளைச்சல் இழப்பு சாத்தியம்') },
+                  { level: t('Low','குறைவு'),    color: 'bg-emerald-100 text-emerald-700', desc: t('Manageable with basic treatment','அடிப்படை சிகிச்சையுடன் நிர்வகிக்கலாம்') },
                 ].map(({ level, color, desc }) => (
                   <div key={level} className="flex items-start gap-2">
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${color}`}>{level}</span>
@@ -273,10 +276,10 @@ export default function Library() {
 
             {/* Scan CTA */}
             <div className="card bg-gradient-to-br from-emerald-600 to-emerald-800 text-white border-0 text-center">
-              <p className="font-bold text-sm mb-1">Spot a disease?</p>
-              <p className="text-emerald-100 text-xs mb-4">Upload a photo and get an instant AI diagnosis.</p>
+              <p className="font-bold text-sm mb-1">{t('Spot a disease?','நோயை கண்டீர்களா?')}</p>
+              <p className="text-emerald-100 text-xs mb-4">{t('Upload a photo and get an instant AI diagnosis.','ஒரு புகைப்படத்தை பதிவேற்றி உடனடி AI நோயறிதலைப் பெறுங்கள்.')}</p>
               <Link to="/scanner" className="bg-white text-emerald-700 font-bold text-xs px-4 py-2 rounded-xl hover:bg-emerald-50 transition-colors inline-block">
-                Scan Now →
+                {t('Scan Now →','இப்போது ஸ்கேன் செய் →')}
               </Link>
             </div>
 
