@@ -184,7 +184,7 @@ Respond ONLY with valid JSON (no markdown, no extra text):
   ]
 }`
 
-    const MODELS = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-vision-preview']
+    const MODELS = ['gpt-4o-mini', 'gpt-4o', 'gpt-4-vision-preview']
     let content = null
     let lastErr = null
 
@@ -201,7 +201,7 @@ Respond ONLY with valid JSON (no markdown, no extra text):
               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Image}`, detail: 'high' } }
             ]}],
             temperature: 0.1,
-            max_tokens: 1200
+            max_tokens: 800
           })
         })
         const timeoutPromise = new Promise((_, reject) =>
@@ -283,34 +283,52 @@ app.get('/api/diseases/:id', (req, res) => {
 // Silence Chrome DevTools probe
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => res.json({}))
 
-// POST /api/translate — translate disease result to target language
+// POST /api/translate — translate single text
 app.post('/api/translate', express.json(), async (req, res) => {
   const { text, targetLang } = req.body
   if (!text || !targetLang) return res.status(400).json({ error: 'Missing text or targetLang' })
-
   const langName = targetLang === 'ta' ? 'Tamil (தமிழ்)' : 'English'
-
   try {
     const response = await fetch(`${process.env.AICC_BASE_URL || 'https://api.ai.cc/v1'}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.AICC_API_KEY}`
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.AICC_API_KEY}` },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
-        messages: [{
-          role: 'user',
-          content: `Translate the following text to ${langName}. Return ONLY the translated text, nothing else:\n\n${text}`
-        }],
-        temperature: 0.1,
-        max_tokens: 1000
+        messages: [{ role: 'user', content: `Translate to ${langName}. Return ONLY translated text:\n\n${text}` }],
+        temperature: 0.1, max_tokens: 500
       })
     })
     const data = await response.json()
     const translated = data.choices?.[0]?.message?.content?.trim()
     if (!translated) return res.status(500).json({ error: 'Translation failed' })
     res.json({ translated })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/translate-batch — translate all disease fields in ONE API call (much faster)
+app.post('/api/translate-batch', express.json(), async (req, res) => {
+  const { fields, targetLang } = req.body
+  if (!fields || !targetLang) return res.status(400).json({ error: 'Missing fields or targetLang' })
+  const langName = targetLang === 'ta' ? 'Tamil (தமிழ்)' : 'English'
+  // fields is an object like { name, plant, description, symptoms: [], treatment: [], ... }
+  const prompt = `Translate ALL the following fields to ${langName}. Return ONLY valid JSON with the same structure, no extra text:\n\n${JSON.stringify(fields)}`
+  try {
+    const response = await fetch(`${process.env.AICC_BASE_URL || 'https://api.ai.cc/v1'}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.AICC_API_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1, max_tokens: 2000
+      })
+    })
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content?.trim()
+    if (!content) return res.status(500).json({ error: 'Translation failed' })
+    const cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+    res.json(JSON.parse(cleaned))
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

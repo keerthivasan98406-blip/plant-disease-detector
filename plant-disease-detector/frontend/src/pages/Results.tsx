@@ -7,6 +7,8 @@ import { useLang } from '../context/LangContext'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
 async function translateText(text: string, targetLang: string): Promise<string> {
   if (targetLang === 'en') return text
   try {
@@ -125,31 +127,39 @@ export default function Results() {
 
   const { disease: origDisease, confidence, imageUrl, imageName, isHealthy } = state
 
-  // Auto-translate when Tamil mode is activated
+  // Auto-translate when Tamil mode is activated — uses batch endpoint (1 API call)
   useEffect(() => {
     if (ttsLang === 'ta' && !taData && origDisease) {
       setTranslatingPage(true)
-      Promise.all([
-        translateText(origDisease.name, 'ta'),
-        translateText(origDisease.plant, 'ta'),
-        translateText(origDisease.description, 'ta'),
-        Promise.all(origDisease.symptoms.map(s => translateText(s, 'ta'))),
-        Promise.all(origDisease.treatment.map(t => translateText(t, 'ta'))),
-        Promise.all(origDisease.prevention.map(p => translateText(p, 'ta'))),
-        Promise.all(origDisease.medicines.map(async m => ({
-          name: await translateText(m.name, 'ta'),
-          dosage: await translateText(m.dosage, 'ta'),
-          frequency: await translateText(m.frequency, 'ta'),
-        })))
-      ]).then(([name, plant, description, symptoms, treatment, prevention, medicines]) => {
-        setTaData({ ...origDisease, name, plant, description, symptoms, treatment, prevention, medicines })
-      }).finally(() => setTranslatingPage(false))
+      fetch(`${API_BASE}/api/translate-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            name: origDisease.name,
+            plant: origDisease.plant,
+            description: origDisease.description,
+            symptoms: origDisease.symptoms,
+            treatment: origDisease.treatment,
+            prevention: origDisease.prevention,
+            medicines: origDisease.medicines
+          },
+          targetLang: 'ta'
+        })
+      })
+        .then(r => r.json())
+        .then(translated => {
+          setTaData({ ...origDisease, ...translated })
+        })
+        .catch(() => setTaData(origDisease)) // fallback to English on error
+        .finally(() => setTranslatingPage(false))
     }
     stop()
   }, [ttsLang])
 
-  // Use translated data when in Tamil mode, else original
+  // While translating, don't show mixed content
   const disease: Disease = (isTamil && taData) ? taData : origDisease
+  const showingTranslated = isTamil && !!taData
 
   const severityBg: Record<string, string> = {
     High: 'from-red-900/80 via-red-800/60',
@@ -255,16 +265,17 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Translation loading indicator */}
+        {/* Translation loading — show spinner instead of mixed content */}
         {translatingPage && (
-          <div className="flex items-center gap-2 mb-6 text-amber-600 bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">தமிழில் மொழிபெயர்க்கிறது...</span>
+          <div className="flex flex-col items-center gap-4 py-20">
+            <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+            <p className="text-amber-600 font-medium">தமிழில் மொழிபெயர்க்கிறது...</p>
+            <p className="text-xs text-gray-400">சில வினாடிகள் காத்திருங்கள்</p>
           </div>
         )}
 
-        {/* Detail grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        {/* Detail grid — only show when not translating */}
+        {!translatingPage && (
 
           {/* Symptoms */}
           <div className="card border-t-4 border-t-amber-400">
@@ -351,6 +362,7 @@ export default function Results() {
             </ul>
           </div>
         </div>
+        )} {/* end !translatingPage */}
 
         {/* Drone / fertilizer promo strip */}
         <div className="mt-10 grid sm:grid-cols-2 gap-5">

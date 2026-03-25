@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { Bug, Camera, X, Loader2, AlertCircle, ScanLine, RefreshCw, Volume2, VolumeX } from 'lucide-react'
 import axios from 'axios'
 import { useLang } from '../context/LangContext'
@@ -34,6 +34,7 @@ export default function PestFinder() {
   const streamRef = useRef<MediaStream | null>(null)
   const [cameraOn, setCameraOn] = useState(false)
   const [cameraReady, setCameraReady] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
@@ -95,6 +96,16 @@ export default function PestFinder() {
     reader.readAsDataURL(file)
   }
 
+  // Paste support
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith('image/'))
+      if (item) { const f = item.getAsFile(); if (f) handleFile(f) }
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [])
+
   const reset = () => {
     stopCamera()
     setPreview(null)
@@ -109,6 +120,7 @@ export default function PestFinder() {
     setLoading(true)
     setError('')
     setResult(null)
+    setTaResult(null)
     try {
       await axios.get(`${API_BASE}/api/health`, { timeout: 10000 }).catch(() => {})
       const formData = new FormData()
@@ -119,7 +131,10 @@ export default function PestFinder() {
         timeout: 90000
       })
       setResult(res.data)
-      if (isTamil) translateResult(res.data)
+      // Always translate immediately if Tamil mode is on
+      if (isTamil) {
+        translateResult(res.data)
+      }
     } catch (err) {
       const msg = axios.isAxiosError(err)
         ? err.response?.data?.error || t('Analysis failed. Try again.', 'பகுப்பாய்வு தோல்வியடைந்தது.')
@@ -133,25 +148,33 @@ export default function PestFinder() {
   const translateResult = useCallback(async (r: PestResult) => {
     setTranslating(true)
     try {
-      const [pest, plant, description, damage, control, organic, chemicals] = await Promise.all([
-        translateText(r.pest),
-        translateText(r.plant),
-        translateText(r.description),
-        Promise.all(r.damage.map(d => translateText(d))),
-        Promise.all(r.control.map(c => translateText(c))),
-        Promise.all(r.organic.map(o => translateText(o))),
-        Promise.all(r.chemicals.map(async c => ({
-          name: await translateText(c.name),
-          dosage: await translateText(c.dosage)
-        })))
-      ])
-      setTaResult({ ...r, pest, plant, description, damage, control, organic, chemicals })
+      const res = await fetch(`${API_BASE}/api/translate-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            pest: r.pest,
+            plant: r.plant,
+            description: r.description,
+            damage: r.damage,
+            control: r.control,
+            organic: r.organic,
+            chemicals: r.chemicals
+          },
+          targetLang: 'ta'
+        })
+      })
+      const translated = await res.json()
+      setTaResult({ ...r, ...translated })
+    } catch {
+      setTaResult(r) // fallback to English
     } finally {
       setTranslating(false)
     }
   }, [])
 
-  const display = (isTamil && taResult) ? taResult : result
+  // While translating in Tamil mode, don't show mixed content — wait for full translation
+  const display = isTamil ? taResult : result
 
   const speakResult = () => {
     if (!display) return
@@ -225,13 +248,17 @@ export default function PestFinder() {
               <div className="space-y-4">
                 <div
                   onClick={() => fileRef.current?.click()}
-                  className="border-2 border-dashed border-red-300 rounded-3xl p-14 text-center cursor-pointer hover:border-red-500 hover:bg-red-50/50 transition-all"
+                  onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f && f.type.startsWith('image/')) handleFile(f) }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  className={`border-2 border-dashed rounded-3xl p-14 text-center cursor-pointer transition-all ${dragOver ? 'border-red-500 bg-red-50 scale-[1.01]' : 'border-red-300 hover:border-red-500 hover:bg-red-50/50'}`}
                 >
                   <div className="bg-red-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Bug className="w-8 h-8 text-red-600" />
                   </div>
                   <p className="text-lg font-bold text-gray-800 mb-1">{t('Drop plant image here', 'தாவர படத்தை இங்கே போடுங்கள்')}</p>
                   <p className="text-sm text-gray-400">{t('or click to browse', 'அல்லது கிளிக் செய்யுங்கள்')}</p>
+                  <p className="text-xs text-gray-300 mt-1">{t('Drag & drop or paste image (Ctrl+V)', 'இழுத்து விடவும் அல்லது ஒட்டவும் (Ctrl+V)')}</p>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
                 </div>
                 <div className="flex items-center gap-4">
@@ -289,6 +316,14 @@ export default function PestFinder() {
                   {loading ? <><Loader2 className="w-5 h-5 animate-spin" />{t('Analyzing...', 'பகுப்பாய்வு செய்கிறது...')}</> : <><ScanLine className="w-5 h-5" />{t('Find Pests with AI', 'AI மூலம் பூச்சிகளை கண்டுபிடி')}</>}
                 </button>
                 {loading && <p className="text-center text-xs text-gray-400">{t('This may take 30–60 seconds', '30–60 வினாடிகள் ஆகலாம்')}</p>}
+              </div>
+            )}
+
+            {/* Translating state */}
+            {isTamil && translating && result && !taResult && (
+              <div className="flex flex-col items-center gap-3 py-10">
+                <Loader2 className="w-8 h-8 text-red-500 animate-spin" />
+                <p className="text-sm text-amber-600 font-medium">தமிழில் மொழிபெயர்க்கிறது...</p>
               </div>
             )}
 

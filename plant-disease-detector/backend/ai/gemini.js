@@ -5,8 +5,8 @@ const API_KEY = process.env.AICC_API_KEY
 const BASE_URL = 'https://api.ai.cc/v1'
 
 const MODELS = [
+  'gpt-4o-mini',  // fastest — try first
   'gpt-4o',
-  'gpt-4o-mini',
   'gpt-4-vision-preview',
 ]
 
@@ -101,9 +101,7 @@ async function callAICC(model, base64Image, mimeType, prompt) {
       }
     ],
     temperature: 0.1,
-
-    
-    max_tokens: 1500
+    max_tokens: 1000
   })
 
   const fetchPromise = fetch(url, {
