@@ -1,8 +1,63 @@
 import { useState, useEffect } from 'react'
-import { Cloud, Thermometer, Droplets, Wind, AlertTriangle, ShieldCheck, Loader2, MapPin, RefreshCw, Volume2, VolumeX } from 'lucide-react'
+import { Cloud, Thermometer, Droplets, Wind, AlertTriangle, ShieldCheck, Loader2, MapPin, RefreshCw, Volume2, VolumeX, Sun, Umbrella, Snowflake, Leaf } from 'lucide-react'
 import { useLang } from '../context/LangContext'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
+
+const SEASONS = [
+  {
+    key: 'summer',
+    icon: Sun,
+    color: { bg: 'bg-orange-50', border: 'border-orange-300', header: 'bg-orange-500', badge: 'bg-orange-100 text-orange-700' },
+    label: { en: 'Summer', ta: 'கோடை காலம்' },
+    temp: { en: '30–45°C, Low Humidity', ta: '30–45°C, குறைந்த ஈரப்பதம்' },
+    diseases: [
+      { name: { en: 'Powdery Mildew', ta: 'பொடி பூஞ்சை' }, plants: { en: 'Cucumbers, Squash, Roses', ta: 'வெள்ளரி, சுரைக்காய், ரோஜா' }, risk: 'High' as const, tip: { en: 'Apply sulfur-based fungicide; ensure good air circulation', ta: 'கந்தக அடிப்படையிலான பூஞ்சைக்கொல்லி தெளிக்கவும்; நல்ல காற்றோட்டம் உறுதிசெய்யவும்' } },
+      { name: { en: 'Spider Mites', ta: 'சிலந்தி பூச்சிகள்' }, plants: { en: 'Tomato, Beans, Corn', ta: 'தக்காளி, பீன்ஸ், சோளம்' }, risk: 'High' as const, tip: { en: 'Spray water on leaves; use neem oil or miticide', ta: 'இலைகளில் தண்ணீர் தெளிக்கவும்; வேப்ப எண்ணெய் பயன்படுத்தவும்' } },
+      { name: { en: 'Leaf Scorch', ta: 'இலை எரிவு' }, plants: { en: 'Most crops', ta: 'பெரும்பாலான பயிர்கள்' }, risk: 'Medium' as const, tip: { en: 'Mulch soil; water deeply in early morning', ta: 'மண்ணை மூடுங்கள்; காலையில் ஆழமாக நீர் பாய்ச்சுங்கள்' } },
+      { name: { en: 'Fusarium Wilt', ta: 'ஃபுசேரியம் வாடல்' }, plants: { en: 'Tomato, Pepper, Melon', ta: 'தக்காளி, மிளகாய், தர்பூசணி' }, risk: 'Medium' as const, tip: { en: 'Use resistant varieties; avoid overwatering', ta: 'எதிர்ப்பு திறன் கொண்ட வகைகளை பயன்படுத்தவும்' } },
+    ]
+  },
+  {
+    key: 'monsoon',
+    icon: Umbrella,
+    color: { bg: 'bg-blue-50', border: 'border-blue-300', header: 'bg-blue-600', badge: 'bg-blue-100 text-blue-700' },
+    label: { en: 'Monsoon / Rainy', ta: 'மழைக்காலம்' },
+    temp: { en: '20–30°C, Very High Humidity', ta: '20–30°C, மிக அதிக ஈரப்பதம்' },
+    diseases: [
+      { name: { en: 'Late Blight', ta: 'தாமத கருகல்' }, plants: { en: 'Tomato, Potato', ta: 'தக்காளி, உருளைக்கிழங்கு' }, risk: 'High' as const, tip: { en: 'Apply copper fungicide every 7 days; remove infected leaves', ta: 'ஒவ்வொரு 7 நாட்களுக்கும் செம்பு பூஞ்சைக்கொல்லி தெளிக்கவும்' } },
+      { name: { en: 'Downy Mildew', ta: 'கீழ் பூஞ்சை' }, plants: { en: 'Grapes, Cucumber, Onion', ta: 'திராட்சை, வெள்ளரி, வெங்காயம்' }, risk: 'High' as const, tip: { en: 'Improve drainage; apply Mancozeb fungicide', ta: 'வடிகால் மேம்படுத்தவும்; மான்கோஜெப் தெளிக்கவும்' } },
+      { name: { en: 'Rice Blast', ta: 'நெல் வெடிப்பு' }, plants: { en: 'Rice', ta: 'நெல்' }, risk: 'High' as const, tip: { en: 'Use resistant varieties; apply Tricyclazole', ta: 'எதிர்ப்பு வகைகளை பயன்படுத்தவும்; ட்ரைசைக்லசோல் தெளிக்கவும்' } },
+      { name: { en: 'Bacterial Leaf Spot', ta: 'பாக்டீரியா இலை புள்ளி' }, plants: { en: 'Pepper, Tomato', ta: 'மிளகாய், தக்காளி' }, risk: 'Medium' as const, tip: { en: 'Avoid overhead irrigation; use copper bactericide', ta: 'மேல்நோக்கி நீர்ப்பாசனம் தவிர்க்கவும்' } },
+    ]
+  },
+  {
+    key: 'winter',
+    icon: Snowflake,
+    color: { bg: 'bg-sky-50', border: 'border-sky-300', header: 'bg-sky-600', badge: 'bg-sky-100 text-sky-700' },
+    label: { en: 'Winter / Cold', ta: 'குளிர்காலம்' },
+    temp: { en: '5–20°C, Moderate Humidity', ta: '5–20°C, மிதமான ஈரப்பதம்' },
+    diseases: [
+      { name: { en: 'Grey Mould (Botrytis)', ta: 'சாம்பல் அச்சு' }, plants: { en: 'Strawberry, Grapes, Lettuce', ta: 'ஸ்ட்ராபெரி, திராட்சை, கீரை' }, risk: 'High' as const, tip: { en: 'Remove dead plant material; improve ventilation', ta: 'இறந்த தாவர பொருட்களை அகற்றவும்; காற்றோட்டம் மேம்படுத்தவும்' } },
+      { name: { en: 'Root Rot', ta: 'வேர் அழுகல்' }, plants: { en: 'Most vegetables', ta: 'பெரும்பாலான காய்கறிகள்' }, risk: 'Medium' as const, tip: { en: 'Avoid waterlogging; use well-draining soil', ta: 'நீர் தேங்காமல் பார்க்கவும்; நல்ல வடிகால் மண் பயன்படுத்தவும்' } },
+      { name: { en: 'Leaf Rust', ta: 'இலை துரு' }, plants: { en: 'Wheat, Barley', ta: 'கோதுமை, வாற்கோதுமை' }, risk: 'High' as const, tip: { en: 'Apply Propiconazole fungicide at first sign', ta: 'முதல் அறிகுறியில் புரோபிகோனசோல் தெளிக்கவும்' } },
+      { name: { en: 'Damping Off', ta: 'நாற்று அழுகல்' }, plants: { en: 'Seedlings of all crops', ta: 'அனைத்து பயிர் நாற்றுகள்' }, risk: 'Medium' as const, tip: { en: 'Use sterile seed mix; avoid overwatering seedlings', ta: 'கிருமிநாசினி விதை கலவை பயன்படுத்தவும்' } },
+    ]
+  },
+  {
+    key: 'spring',
+    icon: Leaf,
+    color: { bg: 'bg-emerald-50', border: 'border-emerald-300', header: 'bg-emerald-600', badge: 'bg-emerald-100 text-emerald-700' },
+    label: { en: 'Spring / Mild', ta: 'வசந்த காலம்' },
+    temp: { en: '15–28°C, Moderate Humidity', ta: '15–28°C, மிதமான ஈரப்பதம்' },
+    diseases: [
+      { name: { en: 'Anthracnose', ta: 'ஆந்த்ராக்னோஸ்' }, plants: { en: 'Mango, Banana, Beans', ta: 'மாம்பழம், வாழை, பீன்ஸ்' }, risk: 'Medium' as const, tip: { en: 'Apply Carbendazim; prune infected branches', ta: 'கார்பென்டசிம் தெளிக்கவும்; பாதிக்கப்பட்ட கிளைகளை கத்தரிக்கவும்' } },
+      { name: { en: 'Early Blight', ta: 'ஆரம்ப கருகல்' }, plants: { en: 'Tomato, Potato', ta: 'தக்காளி, உருளைக்கிழங்கு' }, risk: 'Medium' as const, tip: { en: 'Rotate crops; apply Chlorothalonil fungicide', ta: 'பயிர் சுழற்சி செய்யவும்; குளோரோதலோனில் தெளிக்கவும்' } },
+      { name: { en: 'Aphid Infestation', ta: 'அசுவினி தாக்குதல்' }, plants: { en: 'Roses, Vegetables, Citrus', ta: 'ரோஜா, காய்கறிகள், சிட்ரஸ்' }, risk: 'Medium' as const, tip: { en: 'Use neem oil spray; introduce ladybugs naturally', ta: 'வேப்ப எண்ணெய் தெளிக்கவும்; இயற்கையாக லேடிபக்ஸ் அறிமுகப்படுத்தவும்' } },
+      { name: { en: 'Black Sigatoka', ta: 'கருப்பு சிகடோகா' }, plants: { en: 'Banana', ta: 'வாழை' }, risk: 'High' as const, tip: { en: 'Apply Propiconazole; remove infected leaves immediately', ta: 'புரோபிகோனசோல் தெளிக்கவும்; பாதிக்கப்பட்ட இலைகளை உடனே அகற்றவும்' } },
+    ]
+  },
+]
 
 interface DiseaseRisk {
   name: string
@@ -272,6 +327,62 @@ export default function WeatherRisk() {
 
           </div>
         )}
+
+        {/* ── SEASONAL DISEASE GUIDE ── */}
+        <div className="mt-12">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-extrabold text-gray-900">{t('Seasonal Disease Guide', 'பருவகால நோய் வழிகாட்டி')}</h2>
+            <p className="text-gray-500 text-sm mt-2">{t('Know which diseases to watch for in every season', 'ஒவ்வொரு பருவத்திலும் எந்த நோய்களை கவனிக்க வேண்டும் என்று தெரிந்துகொள்ளுங்கள்')}</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {SEASONS.map(season => {
+              const Icon = season.icon
+              return (
+                <div key={season.key} className={`rounded-3xl overflow-hidden border-2 ${season.color.border} shadow-md`}>
+                  {/* Season header */}
+                  <div className={`${season.color.header} px-5 py-4 flex items-center gap-3`}>
+                    <div className="bg-white/20 p-2 rounded-xl">
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-white text-lg">{isTamil ? season.label.ta : season.label.en}</h3>
+                      <p className="text-white/80 text-xs">{isTamil ? season.temp.ta : season.temp.en}</p>
+                    </div>
+                  </div>
+
+                  {/* Disease list */}
+                  <div className={`${season.color.bg} p-4 space-y-3`}>
+                    {season.diseases.map((d, i) => (
+                      <div key={i} className="bg-white rounded-2xl p-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div>
+                            <p className="font-bold text-gray-900 text-sm">{isTamil ? d.name.ta : d.name.en}</p>
+                            <p className="text-xs text-gray-500">{isTamil ? d.plants.ta : d.plants.en}</p>
+                          </div>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                            d.risk === 'High' ? 'bg-red-100 text-red-700' :
+                            d.risk === 'Medium' ? 'bg-amber-100 text-amber-700' :
+                            'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {d.risk === 'High' ? t('High','அதிகம்') : d.risk === 'Medium' ? t('Medium','நடுத்தரம்') : t('Low','குறைவு')}
+                          </span>
+                        </div>
+                        <div className={`rounded-xl px-3 py-2 mt-2 ${season.color.bg}`}>
+                          <p className="text-xs text-gray-600">
+                            <span className="font-semibold text-gray-700">{t('Tip: ','குறிப்பு: ')}</span>
+                            {isTamil ? d.tip.ta : d.tip.en}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
       </div>
     </div>
   )
