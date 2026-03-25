@@ -41,25 +41,34 @@ function splitChunks(text: string, max = 180): string[] {
   return chunks.length ? chunks : [text.slice(0, max)]
 }
 
-// Play Tamil audio — backend proxy to avoid CORS issues
-async function speakTamil(text: string, onDone: () => void, onError: () => void) {
+// Play Tamil audio via backend proxy (avoids CORS)
+function speakTamil(text: string, onDone: () => void, onError: () => void) {
   const chunks = splitChunks(text)
   let i = 0
+
   const playNext = () => {
     if (i >= chunks.length) { onDone(); return }
-    const chunk = chunks[i]
-    i++
-    // Try backend proxy first, fallback to direct Google TTS
-    const tryPlay = (src: string, fallback?: () => void) => {
-      const audio = new Audio(src)
-      audio.onended = () => playNext()
-      audio.onerror = () => { if (fallback) fallback(); else onError() }
-      audio.play().catch(() => { if (fallback) fallback(); else onError() })
+    const chunk = chunks[i++]
+    const src = `${API_BASE}/api/tts?lang=ta&text=${encodeURIComponent(chunk)}`
+    const audio = new Audio(src)
+    audio.onended = playNext
+    audio.onerror = () => {
+      // Final fallback: Web Speech API with ta-IN
+      const utter = new SpeechSynthesisUtterance(text)
+      utter.lang = 'ta-IN'
+      utter.rate = 0.85
+      utter.onend = onDone
+      utter.onerror = onError
+      window.speechSynthesis.speak(utter)
     }
-    const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ta&client=tw-ob&q=${encodeURIComponent(chunk)}`
-    const proxyUrl = `${API_BASE}/api/tts?lang=ta&text=${encodeURIComponent(chunk)}`
-    // Try direct first, then proxy
-    tryPlay(directUrl, () => tryPlay(proxyUrl, onError))
+    audio.play().catch(() => {
+      const utter = new SpeechSynthesisUtterance(text)
+      utter.lang = 'ta-IN'
+      utter.rate = 0.85
+      utter.onend = onDone
+      utter.onerror = onError
+      window.speechSynthesis.speak(utter)
+    })
   }
   playNext()
 }
@@ -86,18 +95,10 @@ function useTTS() {
     setSpeaking(id)
 
     if (lang === 'ta') {
-      await speakTamil(
+      speakTamil(
         finalText,
         () => setSpeaking(null),
-        () => {
-          // Fallback to Web Speech if Google TTS blocked
-          const utter = new SpeechSynthesisUtterance(finalText)
-          utter.lang = 'ta-IN'
-          utter.rate = 0.85
-          utter.onend = () => setSpeaking(null)
-          utter.onerror = () => setSpeaking(null)
-          window.speechSynthesis.speak(utter)
-        }
+        () => setSpeaking(null)
       )
     } else {
       const utter = new SpeechSynthesisUtterance(finalText)

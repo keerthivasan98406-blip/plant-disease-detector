@@ -287,14 +287,23 @@ app.get('/api/tts', async (req, res) => {
   try {
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://translate.google.com/',
+        'Accept': 'audio/mpeg,audio/*'
+      }
     })
-    if (!response.ok) return res.status(502).json({ error: 'TTS fetch failed' })
+    if (!response.ok) {
+      console.error(`TTS fetch failed: ${response.status}`)
+      return res.status(502).json({ error: 'TTS fetch failed' })
+    }
     res.set('Content-Type', 'audio/mpeg')
     res.set('Cache-Control', 'public, max-age=3600')
+    res.set('Access-Control-Allow-Origin', '*')
     const buffer = await response.arrayBuffer()
     res.send(Buffer.from(buffer))
   } catch (err) {
+    console.error('TTS proxy error:', err.message)
     res.status(500).json({ error: err.message })
   }
 })
