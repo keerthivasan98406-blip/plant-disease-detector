@@ -13,54 +13,36 @@ const MODELS = [
 function buildPrompt(lang) {
   const isTamil = lang === 'ta'
   const langInstruction = isTamil
-    ? 'IMPORTANT: You MUST respond with all text fields (name, plant, description, symptoms, treatment, medicines, prevention) written in Tamil language (தமிழ்). Only the JSON keys must remain in English.'
+    ? 'IMPORTANT: Respond with all text fields in Tamil language (தமிழ்). JSON keys stay in English.'
     : 'Respond in English.'
 
-  return `You are a professional plant pathologist AI. Carefully examine the plant image provided.
+  return `You are a plant disease detection AI. Your ONLY job is to analyze plant images.
 
+STEP 1 — MANDATORY IMAGE CHECK:
+Look at the image. Does it show a plant (leaf, stem, crop, flower, fruit, tree)?
+
+If YES → proceed to STEP 2
+If NO (human, person, face, animal, food, vehicle, building, object, sky, water) → stop and respond with exactly this one word: NOT_A_PLANT
+
+Do NOT try to be helpful by analyzing non-plant images. Do NOT describe what you see if it's not a plant. Just respond: NOT_A_PLANT
+
+STEP 2 — PLANT ANALYSIS (only if image shows a plant):
 ${langInstruction}
 
-CRITICAL RULE — IMAGE VALIDATION:
-You MUST ONLY analyze images that show plants. Reject everything else.
-
-REJECT (respond NOT_A_PLANT) if image shows:
-- Human face, body, hands, or any person
-- Animals (dogs, cats, birds, insects alone without plant context)
-- Food items (cooked food, packaged food)
-- Vehicles, buildings, roads, furniture
-- Logos, text, drawings, screenshots
-- Sky, water, soil alone (without plant)
-
-ACCEPT if image shows:
-- Plant leaves (healthy or diseased)
-- Stems, roots, flowers, fruits on a plant
-- Crops in a field
-- Seedlings or saplings
-
-If NOT a plant image → respond exactly: NOT_A_PLANT
-If IS a plant → analyze and respond with JSON below
-
-Rules for plant analysis:
-- Base your answer ONLY on what you see in this specific image
-- If the plant looks healthy, set isHealthy to true and severity to "None"
-- Be specific about the plant species if identifiable
-- Provide practical, real-world treatment and medicine recommendations
-- Confidence should reflect how certain you are (50-99)
-
-Respond ONLY with this exact JSON structure (no markdown, no extra text) OR the text NOT_A_PLANT:
+Analyze the plant disease and respond ONLY with this JSON (no markdown):
 {
   "disease": {
-    "name": "Exact disease name, or 'Healthy Plant' if no disease found",
-    "plant": "Plant species name (e.g. Tomato, Rose, Wheat)",
-    "description": "2-3 sentences describing what you observe in this image and the condition",
+    "name": "Disease name or 'Healthy Plant'",
+    "plant": "Plant species (e.g. Tomato, Rice, Wheat)",
+    "description": "2-3 sentences about what you observe",
     "severity": "None or Low or Medium or High",
-    "symptoms": ["observed symptom 1", "observed symptom 2", "observed symptom 3", "observed symptom 4"],
-    "treatment": ["specific treatment step 1", "specific treatment step 2", "specific treatment step 3", "specific treatment step 4"],
+    "symptoms": ["symptom 1", "symptom 2", "symptom 3", "symptom 4"],
+    "treatment": ["treatment 1", "treatment 2", "treatment 3", "treatment 4"],
     "medicines": [
-      {"name": "Specific medicine or fungicide name", "dosage": "exact dosage e.g. 2g per litre", "frequency": "e.g. Every 7 days"},
-      {"name": "Specific medicine or fungicide name", "dosage": "exact dosage e.g. 3ml per litre", "frequency": "e.g. Every 10 days"}
+      {"name": "medicine name", "dosage": "dosage", "frequency": "frequency"},
+      {"name": "medicine name", "dosage": "dosage", "frequency": "frequency"}
     ],
-    "prevention": ["prevention tip 1", "prevention tip 2", "prevention tip 3", "prevention tip 4"]
+    "prevention": ["tip 1", "tip 2", "tip 3", "tip 4"]
   },
   "confidence": 85,
   "isHealthy": false
@@ -173,13 +155,27 @@ async function callAICC(model, base64Image, mimeType, prompt) {
   // Strip markdown fences if present
   const cleaned = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
 
+  let parsed
   try {
-    return JSON.parse(cleaned)
+    parsed = JSON.parse(cleaned)
   } catch {
     const match = cleaned.match(/\{[\s\S]*\}/)
     if (match) {
-      try { return JSON.parse(match[0]) } catch {}
+      try { parsed = JSON.parse(match[0]) } catch {}
     }
-    throw new Error('No valid JSON in AICC response')
+    if (!parsed) throw new Error('No valid JSON in AICC response')
   }
+
+  // Second validation: if AI described a non-plant (human, animal etc.) reject it
+  const plantName = (parsed?.disease?.plant || '').toLowerCase()
+  const desc = (parsed?.disease?.description || '').toLowerCase()
+  const nonPlantKeywords = ['human', 'person', 'people', 'man', 'woman', 'child', 'face', 'hand', 'animal', 'dog', 'cat', 'bird', 'car', 'vehicle', 'building', 'food']
+  const isNonPlant = nonPlantKeywords.some(k => plantName.includes(k) || desc.includes(k))
+  if (isNonPlant) {
+    const err = new Error('NOT_A_PLANT')
+    err.code = 'NOT_A_PLANT'
+    throw err
+  }
+
+  return parsed
 }
