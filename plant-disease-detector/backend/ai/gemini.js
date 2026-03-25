@@ -20,10 +20,25 @@ function buildPrompt(lang) {
 
 ${langInstruction}
 
-STRICT RULE: You MUST check if the image contains a plant (leaf, stem, flower, fruit, crop, tree, grass, seedling, etc.).
-- If the image shows a HUMAN, PERSON, ANIMAL, VEHICLE, BUILDING, FOOD, OBJECT, or ANYTHING that is NOT a plant — respond with exactly: NOT_A_PLANT
-- Only analyze images that clearly show plant material
-- If it IS a plant, analyze it and respond with the JSON below
+CRITICAL RULE — IMAGE VALIDATION:
+You MUST ONLY analyze images that show plants. Reject everything else.
+
+REJECT (respond NOT_A_PLANT) if image shows:
+- Human face, body, hands, or any person
+- Animals (dogs, cats, birds, insects alone without plant context)
+- Food items (cooked food, packaged food)
+- Vehicles, buildings, roads, furniture
+- Logos, text, drawings, screenshots
+- Sky, water, soil alone (without plant)
+
+ACCEPT if image shows:
+- Plant leaves (healthy or diseased)
+- Stems, roots, flowers, fruits on a plant
+- Crops in a field
+- Seedlings or saplings
+
+If NOT a plant image → respond exactly: NOT_A_PLANT
+If IS a plant → analyze and respond with JSON below
 
 Rules for plant analysis:
 - Base your answer ONLY on what you see in this specific image

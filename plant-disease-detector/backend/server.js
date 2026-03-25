@@ -280,6 +280,25 @@ app.get('/api/diseases/:id', (req, res) => {
   res.json(disease)
 })
 
+// GET /api/tts — proxy Google Translate TTS to avoid browser CORS
+app.get('/api/tts', async (req, res) => {
+  const { text, lang = 'ta' } = req.query
+  if (!text) return res.status(400).json({ error: 'Missing text' })
+  try {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(text)}`
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
+    })
+    if (!response.ok) return res.status(502).json({ error: 'TTS fetch failed' })
+    res.set('Content-Type', 'audio/mpeg')
+    res.set('Cache-Control', 'public, max-age=3600')
+    const buffer = await response.arrayBuffer()
+    res.send(Buffer.from(buffer))
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Silence Chrome DevTools probe
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (req, res) => res.json({}))
 

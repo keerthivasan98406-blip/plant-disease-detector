@@ -41,18 +41,25 @@ function splitChunks(text: string, max = 180): string[] {
   return chunks.length ? chunks : [text.slice(0, max)]
 }
 
-// Play Tamil audio using Google Translate TTS (supports ta)
+// Play Tamil audio — backend proxy to avoid CORS issues
 async function speakTamil(text: string, onDone: () => void, onError: () => void) {
   const chunks = splitChunks(text)
   let i = 0
   const playNext = () => {
     if (i >= chunks.length) { onDone(); return }
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ta&client=tw-ob&q=${encodeURIComponent(chunks[i])}`
-    const audio = new Audio(url)
-    audio.onended = () => { i++; playNext() }
-    audio.onerror = () => onError()
-    audio.play().catch(() => onError())
+    const chunk = chunks[i]
     i++
+    // Try backend proxy first, fallback to direct Google TTS
+    const tryPlay = (src: string, fallback?: () => void) => {
+      const audio = new Audio(src)
+      audio.onended = () => playNext()
+      audio.onerror = () => { if (fallback) fallback(); else onError() }
+      audio.play().catch(() => { if (fallback) fallback(); else onError() })
+    }
+    const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ta&client=tw-ob&q=${encodeURIComponent(chunk)}`
+    const proxyUrl = `${API_BASE}/api/tts?lang=ta&text=${encodeURIComponent(chunk)}`
+    // Try direct first, then proxy
+    tryPlay(directUrl, () => tryPlay(proxyUrl, onError))
   }
   playNext()
 }
