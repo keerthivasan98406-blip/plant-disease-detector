@@ -4,9 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/leaf.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Leonux AI Disease Detection</title>
+    <title>Leonux AI - Plant Disease Detector</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script>
+      // Restore path after 404 redirect
+      (function() {
+        var redirect = sessionStorage.getItem('spa_redirect')
+        if (redirect && redirect !== '/') {
+          sessionStorage.removeItem('spa_redirect')
+          window.history.replaceState(null, '', redirect)
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
