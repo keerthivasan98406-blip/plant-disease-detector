@@ -9,6 +9,8 @@ const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function translateText(text: string, targetLang: string): Promise<string> {
   if (targetLang === 'en') return text
+  // If text already contains Tamil characters, skip translation
+  if (targetLang === 'ta' && /[\u0B80-\u0BFF]/.test(text)) return text
   try {
     const res = await fetch(`${API_BASE}/api/translate`, {
       method: 'POST',

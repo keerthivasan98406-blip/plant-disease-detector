@@ -47,7 +47,7 @@ app.post('/api/scan', upload.single('image'), async (req, res) => {
       // If not a plant image, return a clear error to the user
       if (aiErr.code === 'NOT_A_PLANT' || aiErr.message === 'NOT_A_PLANT') {
         return res.status(422).json({
-          error: 'No plant detected in the image. Please upload a clear photo of a plant leaf, stem, or crop.'
+          error: 'No plant detected. Please upload a clear photo of a plant leaf, stem, or crop. Human, animal, and object images are not supported.'
         })
       }
       console.error('AI failed, using fallback:', aiErr.message)
