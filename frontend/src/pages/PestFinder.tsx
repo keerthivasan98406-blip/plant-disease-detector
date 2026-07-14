@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { Bug, Camera, X, Loader2, AlertCircle, ScanLine, RefreshCw, Volume2, VolumeX, Upload, Sparkles, ShieldCheck } from 'lucide-react'
+import { Bug, Camera, X, Loader2, AlertCircle, ScanLine, RefreshCw, Volume2, VolumeX, Upload, Sparkles, ShieldCheck, Leaf } from 'lucide-react'
 import axios from 'axios'
 import { useLang } from '../context/LangContext'
 
@@ -10,16 +10,6 @@ interface PestResult {
   description: string; severity: string
   damage: string[]; control: string[]; organic: string[]
   chemicals: { name: string; dosage: string }[]
-}
-
-async function translateText(text: string): Promise<string> {
-  try {
-    const res = await fetch(`${API_BASE}/api/translate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, targetLang: 'ta' })
-    })
-    return (await res.json()).translated || text
-  } catch { return text }
 }
 
 const sevColor: Record<string, string> = {
@@ -243,7 +233,12 @@ export default function PestFinder() {
                       <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">{t('Detected Pest','கண்டறியப்பட்ட பூச்சி')}</p>
                       <h2 className="text-xl sm:text-2xl font-black text-gray-900">{display.pest}</h2>
                       {display.scientificName && <p className="text-xs text-gray-400 italic mt-0.5">{display.scientificName}</p>}
-                      <p className="text-red-600 font-semibold text-sm mt-1">{display.plant}</p>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <Leaf className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                          {t('Host plant','தாவரம்')}: {display.plant}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-xs font-bold px-3 py-1 rounded-full border ${sevColor[display.severity] || sevColor.Medium}`}>

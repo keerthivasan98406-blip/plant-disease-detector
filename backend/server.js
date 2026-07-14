@@ -136,69 +136,77 @@ app.post('/api/pest', upload.single('image'), async (req, res) => {
       ? 'CRITICAL: Write ALL text values in Tamil language (தமிழ்) ONLY. Do NOT mix English words in any value. JSON keys stay in English.'
       : 'Respond in English.'
 
-    const pestPrompt = `You are an expert entomologist AI. Your ONLY job is to identify insects, bugs, mites, and agricultural pests from images.
+    const pestPrompt = `You are an expert agricultural entomologist AI with deep knowledge of crop pests, insects, and plant identification.
 
 ${langNote}
 
-━━━ WHAT TO ACCEPT ━━━
-Analyze the image if it clearly shows ANY of these — in any format, size, or resolution:
+━━━ STEP 1 — IDENTIFY THE PLANT/CROP IN THE IMAGE ━━━
+First, carefully look at the background/host plant in the image and identify it precisely.
+- Look at leaf shape, color, texture, stem structure, fruit/flower if visible
+- Common crops: Tomato, Potato, Rice, Wheat, Maize/Corn, Cotton, Brinjal/Eggplant, Chilli/Pepper, Okra, Cabbage, Cauliflower, Bitter Gourd, Bottle Gourd, Beans, Groundnut, Sunflower, Sugarcane, Banana, Mango, Coconut, Grape, Onion, Garlic, Turmeric, Ginger, Soybean, Chickpea
+- If the plant is NOT clearly identifiable, write "Unknown crop" — do NOT guess a wrong plant
+
+━━━ STEP 2 — IDENTIFY THE PEST ━━━
+Analyze the image if it clearly shows ANY of these:
   ✅ A visible insect, bug, mite, fly, moth, butterfly, beetle, ant, or any arthropod
   ✅ A caterpillar, worm, larva, maggot, nymph, or grub
-  ✅ Pest eggs, egg masses, or egg clusters on leaves/stems
-  ✅ Active pest feeding: bugs visibly eating, sucking, or crawling on plant parts
-  ✅ Webbing, silk threads, or honeydew produced by mites/aphids/whiteflies
-  ✅ Frass (insect droppings) visible on leaves or stems
-  ✅ Leaf mining trails (winding white/brown tunnels inside leaf)
-  ✅ Multiple insects visible in a field or lab setting
+  ✅ Pest eggs or egg masses on leaves/stems
+  ✅ Active pest feeding, sucking, or crawling on plant parts
+  ✅ Webbing, silk threads, or honeydew from mites/aphids/whiteflies
+  ✅ Frass (insect droppings) on leaves or stems
+  ✅ Leaf mining trails (white/brown winding tunnels inside a leaf)
 
 ━━━ WHAT TO REJECT ━━━
-Return ONLY the exact word  NOT_A_PEST  (no JSON, nothing else) if the image shows:
-  ❌ A plant disease only — fungal spots, blight, rust, mold, rot, yellowing with NO visible pest or insect
-  ❌ A healthy plant or leaf with no pest, damage, or insect visible at all
-  ❌ A human, animal (dog/cat/bird), vehicle, building, or non-agricultural object
-  ❌ A blank, black, or solid-color image
+Return ONLY the exact word  NOT_A_PEST  (no JSON, nothing else) if:
+  ❌ Only a plant disease is visible — fungal spots, blight, rust, mold, rot, yellowing with NO visible pest
+  ❌ A healthy plant/leaf with no pest, insect, or pest damage at all
+  ❌ A human, animal, vehicle, building, or non-agricultural object
+  ❌ A blank or solid-color image
 
-━━━ IMPORTANT ━━━
-- If the image shows BOTH a plant disease AND a visible insect — analyze the insect
-- Even a single small insect visible anywhere in the frame is enough to proceed
-- Blurry or low-quality images with a visible insect shape should still be analyzed
-- When in doubt about whether a shape is an insect, attempt analysis
+━━━ IMPORTANT RULES FOR PLANT FIELD ━━━
+- "plant" must be the ACTUAL plant visible in the image — look carefully at the host plant
+- If the pest is on a tomato leaf, write "Tomato" — NOT "Tomato, Cotton, Beans"
+- If the pest is on a rice stem, write "Rice"
+- If you can see the plant but cannot identify it precisely, write the plant type you see (e.g. "Leafy vegetable", "Broadleaf crop", "Grass/Cereal crop")
+- NEVER list multiple unrelated crops in the plant field unless they are all clearly visible
+- "description" must mention both the pest AND the specific plant it is found on
 
 ━━━ OUTPUT FORMAT ━━━
 Respond with ONLY this JSON (no markdown, no explanation):
 
 {
-  "pest": "Exact pest common name (e.g. Aphid, Whitefly, Spider Mite, Thrips, Mealybug, Fall Armyworm, Leaf Miner, Bollworm, Rice Stem Borer, Fruit Fly, Scale Insect)",
+  "pest": "Exact pest common name (e.g. Aphid, Fall Armyworm, Whitefly, Spider Mite, Thrips, Mealybug, Leaf Miner, Bollworm, Rice Stem Borer, Fruit Fly, Scale Insect, Cutworm, Armyworm, Leafhopper, Stink Bug)",
   "scientificName": "Scientific name (e.g. Spodoptera frugiperda) or empty string if unknown",
-  "plant": "Host plant or crop visible, or main crops this pest attacks",
-  "description": "2–3 sentences: what pest is visible, what life stage, what damage is it causing",
+  "plant": "The SPECIFIC plant/crop visible in this image (e.g. Tomato, Rice, Maize, Cotton) — NOT a list of crops",
+  "description": "2–3 sentences: identify the pest by name, describe its life stage (adult/larva/nymph), describe what damage it is causing on the specific plant in this image",
   "severity": "Low or Medium or High",
   "damage": [
-    "Damage sign 1 visible or caused by this pest",
-    "Damage sign 2",
-    "Damage sign 3",
-    "Damage sign 4"
+    "Specific damage symptom this pest causes on the identified plant",
+    "Second damage symptom on this plant",
+    "Third damage symptom on this plant",
+    "Fourth damage symptom — yield or quality impact"
   ],
   "control": [
-    "Immediate mechanical/cultural action",
-    "Biological control method",
-    "Trap or monitoring method",
-    "Field management practice"
+    "Immediate mechanical or cultural action specific to this pest",
+    "Biological control using natural enemies or biopesticides",
+    "Trap or pheromone monitoring method for this pest",
+    "Field sanitation or crop management practice"
   ],
   "organic": [
-    "Neem oil: 5ml per litre water + 2ml soap, spray every 5–7 days",
-    "Second organic/biopesticide remedy",
-    "Third organic option or companion planting"
+    "Neem oil: 5ml per litre water + 2ml soap, spray every 5–7 days on the affected plant",
+    "Second specific organic or biopesticide remedy for this pest",
+    "Third organic option such as botanical extract or companion planting"
   ],
   "chemicals": [
-    {"name": "Insecticide name", "dosage": "Dosage per litre water"},
-    {"name": "Alternative insecticide", "dosage": "Dosage per litre water"}
+    {"name": "Most effective registered insecticide for this pest", "dosage": "Exact dosage per litre water"},
+    {"name": "Alternative insecticide from different chemical group", "dosage": "Exact dosage per litre water"}
   ]
 }
 
 Rules:
-- severity High = >50% plant affected or pest vectors a virus, Medium = 20–50%, Low = <20%
-- All arrays minimum 3 items, chemicals minimum 2`
+- severity: High = >50% plant affected or pest vectors a virus, Medium = 20–50%, Low = <20%
+- All arrays minimum 3 items, chemicals minimum 2
+- All advice must be specific to the identified pest and plant — not generic`
 
     let content
     try {
