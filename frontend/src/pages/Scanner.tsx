@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Upload, Camera, X, Loader2, Leaf, AlertCircle,
-  ScanLine, CheckCircle, RefreshCw, Microscope, Sparkles, ImagePlus
+  ScanLine, CheckCircle, RefreshCw, Microscope, Sparkles, ImagePlus, Zap
 } from 'lucide-react'
 import axios from 'axios'
 import { useLang } from '../context/LangContext'
@@ -26,6 +26,8 @@ export default function Scanner() {
   const [liveResult, setLiveResult] = useState<{name: string, isHealthy: boolean, severity: string} | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
   const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [torchOn, setTorchOn] = useState(false)
+  const [torchSupported, setTorchSupported] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -131,6 +133,11 @@ export default function Scanner() {
         video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       })
       streamRef.current = stream; setMode('camera'); setCameraReady(false)
+      // Check torch support
+      const track = stream.getVideoTracks()[0]
+      const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean }
+      setTorchSupported(!!caps.torch)
+      setTorchOn(false)
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream
@@ -138,6 +145,16 @@ export default function Scanner() {
         }
       }, 100)
     } catch { setError(t('Camera access denied. Please use file upload.', 'கேமரா அணுகல் மறுக்கப்பட்டது.')) }
+  }
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
+    const newState = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: newState } as MediaTrackConstraintSet] })
+      setTorchOn(newState)
+    } catch { /* torch not supported on this device */ }
   }
 
   const capturePhoto = () => {
@@ -156,7 +173,7 @@ export default function Scanner() {
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null; setCameraReady(false)
+    streamRef.current = null; setCameraReady(false); setTorchOn(false); setTorchSupported(false)
   }
 
   const reset = () => {
@@ -323,6 +340,20 @@ export default function Scanner() {
                     {liveMode && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
                     {liveMode ? 'Live ON' : 'Live OFF'}
                   </button>
+                  {/* Torch button */}
+                  {torchSupported && (
+                    <button
+                      onClick={toggleTorch}
+                      className={`absolute top-12 right-3 p-2.5 rounded-full text-xs font-bold backdrop-blur-sm transition-all shadow-lg ${
+                        torchOn
+                          ? 'bg-yellow-400 text-gray-900 shadow-yellow-400/50'
+                          : 'bg-black/50 text-white/80 hover:bg-black/70'
+                      }`}
+                      title={torchOn ? 'Turn off torch' : 'Turn on torch'}
+                    >
+                      <Zap className={`w-4 h-4 ${torchOn ? 'fill-gray-900' : ''}`} />
+                    </button>
+                  )}
                   {/* Live result overlay */}
                   {liveMode && (
                     <div className="absolute bottom-3 left-3 right-3">

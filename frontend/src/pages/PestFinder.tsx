@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { Bug, Camera, X, Loader2, AlertCircle, ScanLine, RefreshCw, Volume2, VolumeX, Upload, Sparkles, ShieldCheck } from 'lucide-react'
+import { Bug, Camera, X, Loader2, AlertCircle, ScanLine, RefreshCw, Volume2, VolumeX, Upload, Sparkles, ShieldCheck, Zap } from 'lucide-react'
 import axios from 'axios'
 import { useLang } from '../context/LangContext'
 
@@ -40,6 +40,8 @@ export default function PestFinder() {
   const [liveResult, setLiveResult] = useState<{pest: string, severity: string} | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
   const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [torchOn, setTorchOn] = useState(false)
+  const [torchSupported, setTorchSupported] = useState(false)
 
   const loadingSteps = [
     t('Scanning for insects...', 'பூச்சிகளை ஸ்கேன் செய்கிறது...'),
@@ -100,10 +102,25 @@ export default function PestFinder() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } })
       streamRef.current = stream; setCameraOn(true); setCameraReady(false)
+      const track = stream.getVideoTracks()[0]
+      const caps = track.getCapabilities() as MediaTrackCapabilities & { torch?: boolean }
+      setTorchSupported(!!caps.torch)
+      setTorchOn(false)
       setTimeout(() => { if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.onloadedmetadata = () => setCameraReady(true) } }, 100)
     } catch { setError(t('Camera access denied.', 'கேமரா அணுகல் மறுக்கப்பட்டது.')) }
   }
-  const stopCamera = () => { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null; setCameraOn(false); setCameraReady(false) }
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
+    const newState = !torchOn
+    try {
+      await track.applyConstraints({ advanced: [{ torch: newState } as MediaTrackConstraintSet] })
+      setTorchOn(newState)
+    } catch { /* torch not supported */ }
+  }
+
+  const stopCamera = () => { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null; setCameraOn(false); setCameraReady(false); setTorchOn(false); setTorchSupported(false) }
   const capture = () => {
     if (!videoRef.current) return
     const v = videoRef.current; const c = document.createElement('canvas')
@@ -120,7 +137,7 @@ export default function PestFinder() {
     const onPaste = (e: ClipboardEvent) => { const item = Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/')); if(item){ const f=item.getAsFile(); if(f) handleFile(f) } }
     window.addEventListener('paste', onPaste); return () => window.removeEventListener('paste', onPaste)
   }, [])
-  const reset = () => { stopCamera(); setPreview(null); setImageFile(null); setResult(null); setTaResult(null); setError(''); setLiveMode(false); setLiveResult(null) }
+  const reset = () => { stopCamera(); setPreview(null); setImageFile(null); setResult(null); setTaResult(null); setError(''); setLiveMode(false); setLiveResult(null); setTorchOn(false); setTorchSupported(false) }
 
   const analyze = async () => {
     if (!imageFile) return
@@ -241,6 +258,20 @@ export default function PestFinder() {
                     {liveMode && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
                     {liveMode ? 'Live ON' : 'Live OFF'}
                   </button>
+                  {/* Torch button */}
+                  {torchSupported && (
+                    <button
+                      onClick={toggleTorch}
+                      className={`absolute top-12 right-3 p-2.5 rounded-full backdrop-blur-sm transition-all shadow-lg ${
+                        torchOn
+                          ? 'bg-yellow-400 text-gray-900 shadow-yellow-400/50'
+                          : 'bg-black/50 text-white/80 hover:bg-black/70'
+                      }`}
+                      title={torchOn ? 'Turn off torch' : 'Turn on torch'}
+                    >
+                      <Zap className={`w-4 h-4 ${torchOn ? 'fill-gray-900' : ''}`} />
+                    </button>
+                  )}
                   {/* Live result overlay */}
                   {liveMode && (
                     <div className="absolute bottom-3 left-3 right-3">
