@@ -193,8 +193,13 @@ export default function WeatherRisk() {
   return (
     <div>
       {/* Hero */}
-      <div className="relative h-52 overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1504608524841-42584120d693?w=1400&q=80" alt="Weather" className="w-full h-full object-cover" />
+      <div className="relative h-52 overflow-hidden bg-gradient-to-r from-blue-900 via-blue-700 to-indigo-600">
+        <img
+          src="https://images.unsplash.com/photo-1504608524841-42584120d693?w=1400&q=80"
+          alt="Weather"
+          className="w-full h-full object-cover"
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 via-blue-800/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent" />
         <div className="absolute inset-0 flex items-center px-6 sm:px-12">

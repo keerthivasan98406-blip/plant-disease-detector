@@ -22,15 +22,6 @@ export default function Home() {
     { step: '03', icon: CheckCircle, title: t('Get Diagnosis','நோயறிதல் பெறுங்கள்'), desc: t('Receive a full report with treatment steps and medicine dosages.','சிகிச்சை படிகள் மற்றும் மருந்து அளவுகளுடன் முழு அறிக்கையைப் பெறுங்கள்.') },
   ]
 
-  const crops = [
-    { name: t('Tomato','தக்காளி'), img: 'https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=300&q=80' },
-    { name: t('Rice','அரிசி'), img: 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?w=300&q=80' },
-    { name: t('Wheat','கோதுமை'), img: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&q=80' },
-    { name: t('Mango','மாம்பழம்'), img: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=300&q=80' },
-    { name: t('Grapes','திராட்சை'), img: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=300&q=80' },
-    { name: t('Pepper','மிளகாய்'), img: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=300&q=80' },
-  ]
-
   return (
     <div className="overflow-x-hidden">
 
@@ -145,25 +136,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CROP GALLERY */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <span className="text-emerald-600 font-semibold text-sm uppercase tracking-widest">{t('Supported Crops','ஆதரிக்கப்படும் பயிர்கள்')}</span>
-            <h2 className="text-4xl font-bold text-gray-900 mt-3 mb-4">{t('Covers Your Key Crops','உங்கள் முக்கிய பயிர்களை உள்ளடக்கியது')}</h2>
-            <p className="text-gray-500 max-w-xl mx-auto">{t('From staple grains to fruits and vegetables — PlantGuard has you covered.','தானியங்கள் முதல் பழங்கள் மற்றும் காய்கறிகள் வரை — PlantGuard உங்களுக்கு உதவுகிறது.')}</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {crops.map(({ name, img }) => (
-              <div key={name} className="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <img src={img} alt={name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                <p className="absolute bottom-3 left-0 right-0 text-center text-white font-semibold text-sm">{name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
+
 
       {/* FEATURES */}
       <section className="py-20 bg-white">
@@ -223,6 +197,15 @@ export default function Home() {
               <Link to="/pest-finder" className="hover:text-white transition-colors">{t('Pest Finder','பூச்சி கண்டுபிடிப்பு')}</Link>
             </div>
             <p className="text-xs text-gray-600">© 2026 Leonux AI {t('Plant Disease Detector','தாவர நோய் கண்டறிவி')}. {t('Built for modern agriculture.','நவீன விவசாயத்திற்காக உருவாக்கப்பட்டது.')}</p>
+          </div>
+          <div className="mt-6 pt-6 border-t border-gray-800 text-center">
+            <p className="text-xs text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              ⚠️ <span className="font-semibold text-gray-500">Disclaimer:</span>{' '}
+              {t(
+                'Leonux AI predictions are AI-generated and may not be 100% accurate. Always consult a professional agronomist or agricultural officer before applying any treatments.',
+                'Leonux AI கணிப்புகள் AI மூலம் உருவாக்கப்பட்டவை மற்றும் 100% துல்லியமாக இருக்காது. எந்த சிகிச்சையையும் பயன்படுத்துவதற்கு முன் தொழில்முறை விவசாய நிபுணரிடம் ஆலோசனை பெறுங்கள்.'
+              )}
+            </p>
           </div>
         </div>
       </footer>
