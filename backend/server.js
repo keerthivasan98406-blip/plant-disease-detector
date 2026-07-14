@@ -136,48 +136,82 @@ app.post('/api/pest', upload.single('image'), async (req, res) => {
       ? 'CRITICAL: Write ALL text values in Tamil language (தமிழ்) ONLY. Do NOT mix English words in any value. JSON keys stay in English.'
       : 'Respond in English.'
 
-    const pestPrompt = `You are an expert agricultural pest identification AI.
+    const pestPrompt = `You are an expert entomologist AI. Your ONLY job is to identify insects, bugs, mites, and agricultural pests from images.
 
 ${langNote}
 
-STEP 1 — STRICT IMAGE VALIDATION:
-Carefully examine the image. ONLY proceed to Step 2 if the image clearly shows:
-✅ An insect, bug, mite, fly, caterpillar, worm, larva, or similar pest
-✅ Visible pest damage on a leaf — such as chewed holes, bite marks, tunneling, frass (pest droppings), webbing, or egg clusters
+━━━ WHAT TO ACCEPT ━━━
+Analyze the image if it clearly shows ANY of these — in any format, size, or resolution:
+  ✅ A visible insect, bug, mite, fly, moth, butterfly, beetle, ant, or any arthropod
+  ✅ A caterpillar, worm, larva, maggot, nymph, or grub
+  ✅ Pest eggs, egg masses, or egg clusters on leaves/stems
+  ✅ Active pest feeding: bugs visibly eating, sucking, or crawling on plant parts
+  ✅ Webbing, silk threads, or honeydew produced by mites/aphids/whiteflies
+  ✅ Frass (insect droppings) visible on leaves or stems
+  ✅ Leaf mining trails (winding white/brown tunnels inside leaf)
+  ✅ Multiple insects visible in a field or lab setting
 
-Immediately return the exact text NOT_A_PEST (nothing else) if the image shows:
-❌ A plain healthy plant or leaf with NO visible insect or pest damage
-❌ A plant disease (spots, blight, fungus) — that belongs in the plant disease scanner, not here
-❌ A human, animal, vehicle, or any non-agricultural object
-❌ A blank or solid-color image
+━━━ WHAT TO REJECT ━━━
+Return ONLY the exact word  NOT_A_PEST  (no JSON, nothing else) if the image shows:
+  ❌ A plant disease only — fungal spots, blight, rust, mold, rot, yellowing with NO visible pest or insect
+  ❌ A healthy plant or leaf with no pest, damage, or insect visible at all
+  ❌ A human, animal (dog/cat/bird), vehicle, building, or non-agricultural object
+  ❌ A blank, black, or solid-color image
 
-STEP 2 — PEST ANALYSIS (only if STEP 1 passed):
-Respond ONLY with this exact JSON (no markdown, no extra text):
+━━━ IMPORTANT ━━━
+- If the image shows BOTH a plant disease AND a visible insect — analyze the insect
+- Even a single small insect visible anywhere in the frame is enough to proceed
+- Blurry or low-quality images with a visible insect shape should still be analyzed
+- When in doubt about whether a shape is an insect, attempt analysis
+
+━━━ OUTPUT FORMAT ━━━
+Respond with ONLY this JSON (no markdown, no explanation):
+
 {
-  "pest": "Exact pest common name (e.g. Aphid, Whitefly, Spider Mite, Thrips, Mealybug, Caterpillar, Grasshopper)",
-  "plant": "Crops or plants this pest commonly attacks",
-  "description": "Describe the pest visible in the image and the damage it causes",
+  "pest": "Exact pest common name (e.g. Aphid, Whitefly, Spider Mite, Thrips, Mealybug, Fall Armyworm, Leaf Miner, Bollworm, Rice Stem Borer, Fruit Fly, Scale Insect)",
+  "scientificName": "Scientific name (e.g. Spodoptera frugiperda) or empty string if unknown",
+  "plant": "Host plant or crop visible, or main crops this pest attacks",
+  "description": "2–3 sentences: what pest is visible, what life stage, what damage is it causing",
   "severity": "Low or Medium or High",
-  "damage": ["damage sign 1", "damage sign 2", "damage sign 3"],
-  "control": ["control step 1", "control step 2", "control step 3"],
-  "organic": ["organic remedy 1", "organic remedy 2", "organic remedy 3"],
+  "damage": [
+    "Damage sign 1 visible or caused by this pest",
+    "Damage sign 2",
+    "Damage sign 3",
+    "Damage sign 4"
+  ],
+  "control": [
+    "Immediate mechanical/cultural action",
+    "Biological control method",
+    "Trap or monitoring method",
+    "Field management practice"
+  ],
+  "organic": [
+    "Neem oil: 5ml per litre water + 2ml soap, spray every 5–7 days",
+    "Second organic/biopesticide remedy",
+    "Third organic option or companion planting"
+  ],
   "chemicals": [
-    {"name": "pesticide name", "dosage": "dosage amount"},
-    {"name": "pesticide name", "dosage": "dosage amount"}
+    {"name": "Insecticide name", "dosage": "Dosage per litre water"},
+    {"name": "Alternative insecticide", "dosage": "Dosage per litre water"}
   ]
-}`
+}
+
+Rules:
+- severity High = >50% plant affected or pest vectors a virus, Medium = 20–50%, Low = <20%
+- All arrays minimum 3 items, chemicals minimum 2`
 
     let content
     try {
       content = await callAIWithImage(pestPrompt, base64Image, mimeType, {
         temperature: 0.1,
-        max_tokens: 900
+        max_tokens: 1200
       })
-      if (content.trim().startsWith('NOT_A_PEST') || content.includes('NOT_A_PEST')) {
-        return res.status(422).json({ error: 'No pest or insect detected in this image. Please upload a clear photo showing an insect, bug, or visible pest damage on a plant.' })
+      console.log(`[Pest Scan] AI raw (first 120): ${content.trim().slice(0, 120)}`)
+      if (/^\s*NOT_A_PEST\s*$/m.test(content) || content.trim() === 'NOT_A_PEST') {
+        return res.status(422).json({ error: 'No pest or insect detected in this image. Please upload a photo that clearly shows an insect, bug, mite, caterpillar, or pest damage on a plant.' })
       }
     } catch (aiErr) {
-      console.warn('AI pest identification failed, falling back to mock:', aiErr.message)
+      console.warn('[Pest Scan] AI failed, falling back to mock:', aiErr.message)
       const { analyzePest } = await import('./mock/analyzer.js')
       const mockResult = analyzePest(req.file.filename)
       return res.json(mockResult)
@@ -191,13 +225,6 @@ Respond ONLY with this exact JSON (no markdown, no extra text):
       const match = cleaned.match(/\{[\s\S]*\}/)
       if (match) result = JSON.parse(match[0])
       else return res.status(500).json({ error: 'Invalid AI response format. Please try again.' })
-    }
-
-    // Post-parse guard: if pest field looks like a plant disease, reject
-    const pestName = (result?.pest || '').toLowerCase()
-    const nonPestKeywords = ['blight', 'mold', 'fungus', 'rot ', 'rust ', 'spot ', 'disease', 'deficiency', 'virus', 'bacteria']
-    if (nonPestKeywords.some(k => pestName.includes(k))) {
-      return res.status(422).json({ error: 'This appears to be a plant disease, not a pest. Please use the Plant Scanner for disease diagnosis.' })
     }
 
     res.json(result)
