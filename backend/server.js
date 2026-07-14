@@ -136,100 +136,61 @@ app.post('/api/pest', upload.single('image'), async (req, res) => {
       ? 'CRITICAL: Write ALL text values in Tamil language (தமிழ்) ONLY. Do NOT mix English words in any value. JSON keys stay in English.'
       : 'Respond in English.'
 
-    const pestPrompt = `You are an expert agricultural entomologist AI with deep knowledge of crop pests, insects, and plant identification.
+    const pestPrompt = `You are an expert entomologist AI. Your ONLY job is to identify insects and pests from photos.
 
 ${langNote}
 
-━━━ STEP 1 — IDENTIFY THE PLANT/CROP IN THE IMAGE ━━━
-First, carefully look at the background/host plant in the image and identify it precisely.
-- Look at leaf shape, color, texture, stem structure, fruit/flower if visible
-- Common crops: Tomato, Potato, Rice, Wheat, Maize/Corn, Cotton, Brinjal/Eggplant, Chilli/Pepper, Okra, Cabbage, Cauliflower, Bitter Gourd, Bottle Gourd, Beans, Groundnut, Sunflower, Sugarcane, Banana, Mango, Coconut, Grape, Onion, Garlic, Turmeric, Ginger, Soybean, Chickpea
-- If the plant is NOT clearly identifiable, write "Unknown crop" — do NOT guess a wrong plant
+━━━ YOUR ONLY JOB ━━━
+Identify the INSECT or PEST in the image. You do NOT care about plants, crops, or leaf conditions.
+Focus 100% on the insect, bug, mite, worm, or arthropod visible in the image.
 
-━━━ CRITICAL — WHAT IS A PEST vs DISEASE ━━━
-You MUST know the difference before analyzing:
+━━━ ACCEPT — analyze if you see ANY of these ━━━
+✅ An insect body (any species — head, legs, wings, abdomen visible)
+✅ A caterpillar, worm, larva, maggot, grub, or nymph
+✅ A mite colony, spider mite webbing, or mite eggs
+✅ Pest eggs or egg masses on any surface
+✅ Frass (insect droppings) on leaves or stems
+✅ Leaf mining trails (winding pale tunnels inside a leaf — caused by leaf miner larvae)
+✅ A blurry or small insect — still analyze if a pest shape is visible
 
-PESTS (insects/arthropods) — ACCEPT these:
-  ✅ Aphid, Whitefly, Thrips, Mealybug, Scale Insect, Spider Mite, Leafhopper
-  ✅ Caterpillar, Armyworm, Bollworm, Stem Borer, Cutworm, Grub, Maggot
-  ✅ Fruit Fly, Leaf Miner, Weevil, Beetle, Grasshopper, Cricket
-  ✅ ANY visible insect body, legs, wings, antennae, eggs, or silk webbing
-  ✅ Frass (dark insect droppings) on leaves/stems
-  ✅ Leaf mining trails (winding tunnels inside leaf tissue)
+━━━ REJECT — return ONLY the word NOT_A_PEST (nothing else) if ━━━
+❌ NO insect or pest body is visible anywhere in the image
+❌ Only a plant disease is shown — spots, blight, rust, rot, mold, lesions with NO insect
+❌ Only a healthy or damaged leaf/plant with NO visible insect
+❌ A human, animal, vehicle, building, food, or non-insect object
+❌ Blank, dark, or unrecognizable image
 
-DISEASES (fungal/bacterial/viral) — REJECT these, return NOT_A_PEST:
-  ❌ Leaf Spot, Leaf Blight, Blast, Scorch, Rust, Powdery Mildew, Downy Mildew
-  ❌ Anthracnose, Canker, Wilt, Rot, Mosaic, Yellow Vein, Bunchy Top
-  ❌ Banana Leaf Spot, Sigatoka, Black Spot, Brown Spot, Gray Leaf Spot
-  ❌ Any brown/black/yellow PATCH, LESION, or SPOT on a leaf with NO insect visible
-  ❌ Discolored, necrotic, or dead leaf tissue with NO visible insect or pest body
-  ❌ A leaf that is just damaged, wilted, dried, or has irregular spots — but NO insect present
-
-━━━ THE GOLDEN RULE ━━━
-Ask yourself: "Can I see an actual insect, bug, mite, worm, or arthropod body in this image?"
-- YES → analyze it as a pest
-- NO, only see damaged/spotted/diseased leaf tissue → return NOT_A_PEST
-
-━━━ WHAT TO ACCEPT ━━━
-Analyze only if you can clearly see:
-  ✅ An actual insect body (head, legs, wings, abdomen) — any size
-  ✅ A caterpillar or worm body actively on the plant
-  ✅ Visible pest eggs, egg masses, or mite colonies
-  ✅ Webbing/silk produced by mites or caterpillars
-  ✅ Frass (dark insect droppings) directly on the leaf/stem
-  ✅ Leaf mining trails (winding pale tunnels inside leaf)
-
-━━━ WHAT TO REJECT — return ONLY the word NOT_A_PEST ━━━
-  ❌ Image shows ONLY leaf spots, lesions, patches, blight, rust, mold, rot, or discoloration
-  ❌ Banana Leaf Spot, Sigatoka, or ANY named plant disease — NO insect visible
-  ❌ A healthy plant or leaf with no pest present
-  ❌ A human, animal, vehicle, building, or non-agricultural object
-  ❌ Blank or solid-color image
-
-━━━ IMPORTANT RULES FOR PLANT FIELD ━━━
-- "plant" must be the ACTUAL plant visible in the image — look carefully at the host plant
-- If the pest is on a tomato leaf, write "Tomato" — NOT "Tomato, Cotton, Beans"
-- If the pest is on a rice stem, write "Rice"
-- If you can see the plant but cannot identify it precisely, write the plant type you see (e.g. "Leafy vegetable", "Broadleaf crop", "Grass/Cereal crop")
-- NEVER list multiple unrelated crops in the plant field unless they are all clearly visible
-- "description" must mention both the pest AND the specific plant it is found on
-
-━━━ OUTPUT FORMAT ━━━
-Respond with ONLY this JSON (no markdown, no explanation):
-
+━━━ OUTPUT — respond with ONLY this JSON, no markdown ━━━
 {
-  "pest": "Exact pest common name (e.g. Aphid, Fall Armyworm, Whitefly, Spider Mite, Thrips, Mealybug, Leaf Miner, Bollworm, Rice Stem Borer, Fruit Fly, Scale Insect, Cutworm, Armyworm, Leafhopper, Stink Bug)",
-  "scientificName": "Scientific name (e.g. Spodoptera frugiperda) or empty string if unknown",
-  "plant": "The SPECIFIC plant/crop visible in this image (e.g. Tomato, Rice, Maize, Cotton) — NOT a list of crops",
-  "description": "2–3 sentences: identify the pest by name, describe its life stage (adult/larva/nymph), describe what damage it is causing on the specific plant in this image",
+  "pest": "Common name of the insect or pest (e.g. Aphid, Fall Armyworm, Whitefly, Spider Mite, Thrips, Mealybug, Cabbage Looper, Bollworm, Fruit Fly, Scale Insect, Grasshopper, Weevil, Leafhopper)",
+  "scientificName": "Scientific name or empty string",
+  "description": "2–3 sentences describing exactly what insect is visible: its appearance, life stage (adult/larva/nymph/egg), behavior, and what damage it causes to crops",
   "severity": "Low or Medium or High",
   "damage": [
-    "Specific damage symptom this pest causes on the identified plant",
-    "Second damage symptom on this plant",
-    "Third damage symptom on this plant",
-    "Fourth damage symptom — yield or quality impact"
+    "Crop damage this insect causes — symptom 1",
+    "Crop damage — symptom 2",
+    "Crop damage — symptom 3"
   ],
   "control": [
-    "Immediate mechanical or cultural action specific to this pest",
-    "Biological control using natural enemies or biopesticides",
-    "Trap or pheromone monitoring method for this pest",
-    "Field sanitation or crop management practice"
+    "Immediate physical/cultural action to remove or reduce this pest",
+    "Biological control — natural predator or biopesticide",
+    "Field monitoring or trap method for this pest"
   ],
   "organic": [
-    "Neem oil: 5ml per litre water + 2ml soap, spray every 5–7 days on the affected plant",
-    "Second specific organic or biopesticide remedy for this pest",
-    "Third organic option such as botanical extract or companion planting"
+    "Neem oil spray: 5ml per litre + 2ml soap, every 5–7 days",
+    "Second organic remedy specific to this insect",
+    "Third organic option — botanical extract or crop rotation"
   ],
   "chemicals": [
-    {"name": "Most effective registered insecticide for this pest", "dosage": "Exact dosage per litre water"},
-    {"name": "Alternative insecticide from different chemical group", "dosage": "Exact dosage per litre water"}
+    {"name": "Most effective insecticide for this pest", "dosage": "Dosage per litre water"},
+    {"name": "Alternative insecticide (different chemical group)", "dosage": "Dosage per litre water"}
   ]
 }
 
 Rules:
-- severity: High = >50% plant affected or pest vectors a virus, Medium = 20–50%, Low = <20%
-- All arrays minimum 3 items, chemicals minimum 2
-- All advice must be specific to the identified pest and plant — not generic`
+- Identify the INSECT only — ignore what plant it is on
+- severity: High = major crop damage or virus vector, Medium = moderate damage, Low = minor damage
+- All arrays minimum 3 items`
 
     let content
     try {
