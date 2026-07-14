@@ -36,6 +36,10 @@ export default function PestFinder() {
   const [taResult, setTaResult] = useState<PestResult | null>(null)
   const [translating, setTranslating] = useState(false)
   const [speaking, setSpeaking] = useState(false)
+  const [liveMode, setLiveMode] = useState(false)
+  const [liveResult, setLiveResult] = useState<{pest: string, severity: string} | null>(null)
+  const [liveLoading, setLiveLoading] = useState(false)
+  const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadingSteps = [
     t('Scanning for insects...', 'பூச்சிகளை ஸ்கேன் செய்கிறது...'),
@@ -50,6 +54,46 @@ export default function PestFinder() {
     else setLoadingStep(0)
     return () => clearInterval(iv)
   }, [loading])
+
+  const captureFrameAndAnalyze = useCallback(async () => {
+    if (!videoRef.current || liveLoading) return
+    const video = videoRef.current
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 1280
+    canvas.height = video.videoHeight || 720
+    canvas.getContext('2d')?.drawImage(video, 0, 0)
+    canvas.toBlob(async (blob) => {
+      if (!blob) return
+      setLiveLoading(true)
+      try {
+        const fd = new FormData()
+        fd.append('image', new File([blob], 'live.jpg', { type: 'image/jpeg' }), 'live.jpg')
+        fd.append('lang', 'en')
+        const res = await axios.post(`${API_BASE}/api/pest`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 15000
+        })
+        setLiveResult({ pest: res.data.pest, severity: res.data.severity })
+      } catch {
+        // silently fail
+      } finally {
+        setLiveLoading(false)
+      }
+    }, 'image/jpeg', 0.75)
+  }, [liveLoading])
+
+  useEffect(() => {
+    if (liveMode && cameraOn) {
+      liveIntervalRef.current = setInterval(captureFrameAndAnalyze, 4000)
+    } else {
+      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current)
+      liveIntervalRef.current = null
+      setLiveResult(null)
+    }
+    return () => {
+      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current)
+    }
+  }, [liveMode, cameraOn, captureFrameAndAnalyze])
 
   const startCamera = async () => {
     setError('')
@@ -76,7 +120,7 @@ export default function PestFinder() {
     const onPaste = (e: ClipboardEvent) => { const item = Array.from(e.clipboardData?.items||[]).find(i=>i.type.startsWith('image/')); if(item){ const f=item.getAsFile(); if(f) handleFile(f) } }
     window.addEventListener('paste', onPaste); return () => window.removeEventListener('paste', onPaste)
   }, [])
-  const reset = () => { stopCamera(); setPreview(null); setImageFile(null); setResult(null); setTaResult(null); setError('') }
+  const reset = () => { stopCamera(); setPreview(null); setImageFile(null); setResult(null); setTaResult(null); setError(''); setLiveMode(false); setLiveResult(null) }
 
   const analyze = async () => {
     if (!imageFile) return
@@ -185,6 +229,39 @@ export default function PestFinder() {
                     <div className={`w-2 h-2 rounded-full ${cameraReady ? 'bg-red-400 animate-pulse' : 'bg-amber-400'}`} />
                     <span className="text-white text-xs">{cameraReady ? t('Ready','தயார்') : t('Starting...','தொடங்குகிறது...')}</span>
                   </div>
+                  {/* Live scan toggle */}
+                  <button
+                    onClick={() => setLiveMode(l => !l)}
+                    className={`absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm transition-all ${
+                      liveMode
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/40'
+                        : 'bg-black/50 text-white/80 hover:bg-black/70'
+                    }`}
+                  >
+                    {liveMode && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                    {liveMode ? 'Live ON' : 'Live OFF'}
+                  </button>
+                  {/* Live result overlay */}
+                  {liveMode && (
+                    <div className="absolute bottom-3 left-3 right-3">
+                      {liveLoading && !liveResult && (
+                        <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-xl">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Scanning...</span>
+                        </div>
+                      )}
+                      {liveResult && (
+                        <div className={`flex items-center gap-2 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-xl ${
+                          liveResult.severity === 'High' ? 'bg-red-600/80' :
+                          liveResult.severity === 'Medium' ? 'bg-amber-600/80' : 'bg-emerald-600/80'
+                        }`}>
+                          {liveLoading && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
+                          <span className="font-bold truncate">{liveResult.pest}</span>
+                          <span className="ml-auto flex-shrink-0 bg-white/20 px-1.5 py-0.5 rounded-full">{liveResult.severity}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   <button onClick={stopCamera} className="flex-1 btn-secondary flex items-center justify-center gap-2"><X className="w-4 h-4"/>{t('Cancel','ரத்து')}</button>

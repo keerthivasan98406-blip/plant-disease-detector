@@ -22,6 +22,10 @@ export default function Scanner() {
   const [loadingStep, setLoadingStep] = useState(0)
   const [error, setError] = useState('')
   const [cameraReady, setCameraReady] = useState(false)
+  const [liveMode, setLiveMode] = useState(false)
+  const [liveResult, setLiveResult] = useState<{name: string, isHealthy: boolean, severity: string} | null>(null)
+  const [liveLoading, setLiveLoading] = useState(false)
+  const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -45,6 +49,51 @@ export default function Scanner() {
     }
     return () => clearInterval(interval)
   }, [loading])
+
+  const captureFrameAndAnalyze = useCallback(async () => {
+    if (!videoRef.current || liveLoading) return
+    const video = videoRef.current
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 1280
+    canvas.height = video.videoHeight || 720
+    canvas.getContext('2d')?.drawImage(video, 0, 0)
+    canvas.toBlob(async (blob) => {
+      if (!blob) return
+      setLiveLoading(true)
+      try {
+        const fd = new FormData()
+        fd.append('image', new File([blob], 'live.jpg', { type: 'image/jpeg' }), 'live.jpg')
+        fd.append('lang', 'en')
+        const res = await axios.post(`${API_BASE}/api/scan`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 15000
+        })
+        const d = res.data
+        setLiveResult({
+          name: d.disease?.name || 'Unknown',
+          isHealthy: d.isHealthy,
+          severity: d.disease?.severity || 'Low'
+        })
+      } catch {
+        // silently fail live scan errors
+      } finally {
+        setLiveLoading(false)
+      }
+    }, 'image/jpeg', 0.75)
+  }, [liveLoading, isTamil])
+
+  useEffect(() => {
+    if (liveMode && mode === 'camera') {
+      liveIntervalRef.current = setInterval(captureFrameAndAnalyze, 4000)
+    } else {
+      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current)
+      liveIntervalRef.current = null
+      setLiveResult(null)
+    }
+    return () => {
+      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current)
+    }
+  }, [liveMode, mode, captureFrameAndAnalyze])
 
   const handleFile = (file: File) => {
     setFileName(file.name)
@@ -113,6 +162,7 @@ export default function Scanner() {
   const reset = () => {
     stopCamera(); setPreview(null); setImageFile(null)
     setFileName(''); setMode('idle'); setError('')
+    setLiveMode(false); setLiveResult(null)
   }
 
   const analyze = async () => {
@@ -261,6 +311,42 @@ export default function Scanner() {
                       {cameraReady ? t('Ready', 'தயார்') : t('Starting...', 'தொடங்குகிறது...')}
                     </span>
                   </div>
+                  {/* Live scan toggle */}
+                  <button
+                    onClick={() => setLiveMode(l => !l)}
+                    className={`absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-sm transition-all ${
+                      liveMode
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/40'
+                        : 'bg-black/50 text-white/80 hover:bg-black/70'
+                    }`}
+                  >
+                    {liveMode && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                    {liveMode ? 'Live ON' : 'Live OFF'}
+                  </button>
+                  {/* Live result overlay */}
+                  {liveMode && (
+                    <div className="absolute bottom-3 left-3 right-3">
+                      {liveLoading && !liveResult && (
+                        <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-xl">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Scanning...</span>
+                        </div>
+                      )}
+                      {liveResult && (
+                        <div className={`flex items-center gap-2 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-xl ${
+                          liveResult.isHealthy ? 'bg-emerald-600/80' :
+                          liveResult.severity === 'High' ? 'bg-red-600/80' :
+                          liveResult.severity === 'Medium' ? 'bg-amber-600/80' : 'bg-blue-600/80'
+                        }`}>
+                          {liveLoading && <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />}
+                          <span className="font-bold truncate">{liveResult.name}</span>
+                          {!liveResult.isHealthy && (
+                            <span className="ml-auto flex-shrink-0 bg-white/20 px-1.5 py-0.5 rounded-full">{liveResult.severity}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <p className="text-center text-sm text-gray-500">
                   {t('Position the affected plant part inside the frame', 'பாதிக்கப்பட்ட தாவர பகுதியை சட்டத்தினுள் வைக்கவும்')}
