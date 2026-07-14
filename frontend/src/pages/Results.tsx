@@ -340,16 +340,7 @@ export default function Results() {
           </Link>
         </div>
 
-        {/* Disclaimer */}
-        <div className="mt-6 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700 leading-relaxed">
-            <span className="font-bold">Disclaimer: </span>
-            {isTamil
-              ? 'Leonux AI கணிப்புகள் AI மூலம் உருவாக்கப்பட்டவை மற்றும் 100% துல்லியமாக இருக்காது. தொழில்முறை விவசாய நிபுணர் அல்லது வேளாண் அதிகாரியிடம் ஆலோசனை பெறுவது பரிந்துரைக்கப்படுகிறது.'
-              : 'Leonux AI predictions are AI-generated and may not be 100% accurate. Always consult a professional agronomist or agricultural officer before applying treatments.'}
-          </p>
-        </div>
+
       </div>
     </div>
   )

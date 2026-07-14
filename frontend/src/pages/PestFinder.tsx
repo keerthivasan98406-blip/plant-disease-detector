@@ -274,17 +274,7 @@ export default function PestFinder() {
                   <RefreshCw className="w-4 h-4"/>{t('Scan Another','மீண்டும் ஸ்கேன் செய்')}
                 </button>
 
-                {/* Disclaimer */}
-                <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-                  <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700 leading-relaxed">
-                    <span className="font-bold">Disclaimer: </span>
-                    {t(
-                      'Leonux AI predictions are AI-generated and may not be 100% accurate. Always consult a professional agronomist or agricultural officer before applying treatments.',
-                      'Leonux AI கணிப்புகள் AI மூலம் உருவாக்கப்பட்டவை மற்றும் 100% துல்லியமாக இருக்காது. சிகிச்சை பயன்படுத்துவதற்கு முன் நிபுணரிடம் ஆலோசனை பெறுங்கள்.'
-                    )}
-                  </p>
-                </div>
+
               </div>
             )}
           </div>

@@ -198,15 +198,7 @@ export default function Home() {
             </div>
             <p className="text-xs text-gray-600">© 2026 Leonux AI {t('Plant Disease Detector','தாவர நோய் கண்டறிவி')}. {t('Built for modern agriculture.','நவீன விவசாயத்திற்காக உருவாக்கப்பட்டது.')}</p>
           </div>
-          <div className="mt-6 pt-6 border-t border-gray-800 text-center">
-            <p className="text-xs text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              ⚠️ <span className="font-semibold text-gray-500">Disclaimer:</span>{' '}
-              {t(
-                'Leonux AI predictions are AI-generated and may not be 100% accurate. Always consult a professional agronomist or agricultural officer before applying any treatments.',
-                'Leonux AI கணிப்புகள் AI மூலம் உருவாக்கப்பட்டவை மற்றும் 100% துல்லியமாக இருக்காது. எந்த சிகிச்சையையும் பயன்படுத்துவதற்கு முன் தொழில்முறை விவசாய நிபுணரிடம் ஆலோசனை பெறுங்கள்.'
-              )}
-            </p>
-          </div>
+
         </div>
       </footer>
     </div>
