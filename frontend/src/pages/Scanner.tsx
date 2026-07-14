@@ -240,7 +240,7 @@ export default function Scanner() {
             {/* CAMERA */}
             {mode === 'camera' && (
               <div className="space-y-4 animate-fade-up">
-                <div className="relative rounded-3xl overflow-hidden bg-black aspect-video shadow-2xl">
+                <div className="relative rounded-3xl overflow-hidden bg-black shadow-2xl" style={{height: '70vh', minHeight: '380px', maxHeight: '600px'}}>
                   <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                   {/* Corner guides */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
