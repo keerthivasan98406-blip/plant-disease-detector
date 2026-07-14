@@ -13,7 +13,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: OPENWEATHER_API_KEY
-        sync: false
+        value: 1313100c35ccdc5eb3c46cf89075ebca
 
   - type: static
     name: plant-disease-detector-frontend
