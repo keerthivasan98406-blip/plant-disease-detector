@@ -146,22 +146,45 @@ First, carefully look at the background/host plant in the image and identify it 
 - Common crops: Tomato, Potato, Rice, Wheat, Maize/Corn, Cotton, Brinjal/Eggplant, Chilli/Pepper, Okra, Cabbage, Cauliflower, Bitter Gourd, Bottle Gourd, Beans, Groundnut, Sunflower, Sugarcane, Banana, Mango, Coconut, Grape, Onion, Garlic, Turmeric, Ginger, Soybean, Chickpea
 - If the plant is NOT clearly identifiable, write "Unknown crop" — do NOT guess a wrong plant
 
-━━━ STEP 2 — IDENTIFY THE PEST ━━━
-Analyze the image if it clearly shows ANY of these:
-  ✅ A visible insect, bug, mite, fly, moth, butterfly, beetle, ant, or any arthropod
-  ✅ A caterpillar, worm, larva, maggot, nymph, or grub
-  ✅ Pest eggs or egg masses on leaves/stems
-  ✅ Active pest feeding, sucking, or crawling on plant parts
-  ✅ Webbing, silk threads, or honeydew from mites/aphids/whiteflies
-  ✅ Frass (insect droppings) on leaves or stems
-  ✅ Leaf mining trails (white/brown winding tunnels inside a leaf)
+━━━ CRITICAL — WHAT IS A PEST vs DISEASE ━━━
+You MUST know the difference before analyzing:
 
-━━━ WHAT TO REJECT ━━━
-Return ONLY the exact word  NOT_A_PEST  (no JSON, nothing else) if:
-  ❌ Only a plant disease is visible — fungal spots, blight, rust, mold, rot, yellowing with NO visible pest
-  ❌ A healthy plant/leaf with no pest, insect, or pest damage at all
+PESTS (insects/arthropods) — ACCEPT these:
+  ✅ Aphid, Whitefly, Thrips, Mealybug, Scale Insect, Spider Mite, Leafhopper
+  ✅ Caterpillar, Armyworm, Bollworm, Stem Borer, Cutworm, Grub, Maggot
+  ✅ Fruit Fly, Leaf Miner, Weevil, Beetle, Grasshopper, Cricket
+  ✅ ANY visible insect body, legs, wings, antennae, eggs, or silk webbing
+  ✅ Frass (dark insect droppings) on leaves/stems
+  ✅ Leaf mining trails (winding tunnels inside leaf tissue)
+
+DISEASES (fungal/bacterial/viral) — REJECT these, return NOT_A_PEST:
+  ❌ Leaf Spot, Leaf Blight, Blast, Scorch, Rust, Powdery Mildew, Downy Mildew
+  ❌ Anthracnose, Canker, Wilt, Rot, Mosaic, Yellow Vein, Bunchy Top
+  ❌ Banana Leaf Spot, Sigatoka, Black Spot, Brown Spot, Gray Leaf Spot
+  ❌ Any brown/black/yellow PATCH, LESION, or SPOT on a leaf with NO insect visible
+  ❌ Discolored, necrotic, or dead leaf tissue with NO visible insect or pest body
+  ❌ A leaf that is just damaged, wilted, dried, or has irregular spots — but NO insect present
+
+━━━ THE GOLDEN RULE ━━━
+Ask yourself: "Can I see an actual insect, bug, mite, worm, or arthropod body in this image?"
+- YES → analyze it as a pest
+- NO, only see damaged/spotted/diseased leaf tissue → return NOT_A_PEST
+
+━━━ WHAT TO ACCEPT ━━━
+Analyze only if you can clearly see:
+  ✅ An actual insect body (head, legs, wings, abdomen) — any size
+  ✅ A caterpillar or worm body actively on the plant
+  ✅ Visible pest eggs, egg masses, or mite colonies
+  ✅ Webbing/silk produced by mites or caterpillars
+  ✅ Frass (dark insect droppings) directly on the leaf/stem
+  ✅ Leaf mining trails (winding pale tunnels inside leaf)
+
+━━━ WHAT TO REJECT — return ONLY the word NOT_A_PEST ━━━
+  ❌ Image shows ONLY leaf spots, lesions, patches, blight, rust, mold, rot, or discoloration
+  ❌ Banana Leaf Spot, Sigatoka, or ANY named plant disease — NO insect visible
+  ❌ A healthy plant or leaf with no pest present
   ❌ A human, animal, vehicle, building, or non-agricultural object
-  ❌ A blank or solid-color image
+  ❌ Blank or solid-color image
 
 ━━━ IMPORTANT RULES FOR PLANT FIELD ━━━
 - "plant" must be the ACTUAL plant visible in the image — look carefully at the host plant
@@ -233,6 +256,21 @@ Rules:
       const match = cleaned.match(/\{[\s\S]*\}/)
       if (match) result = JSON.parse(match[0])
       else return res.status(500).json({ error: 'Invalid AI response format. Please try again.' })
+    }
+
+    // Post-parse safety check: reject if pest field contains disease names instead of actual pests
+    const DISEASE_KEYWORDS = [
+      'leaf spot', 'blight', 'blast', 'rust', 'mildew', 'rot', 'wilt', 'canker',
+      'anthracnose', 'mosaic', 'scorch', 'necrosis', 'lesion', 'sigatoka',
+      'cercospora', 'alternaria', 'fusarium', 'pythium', 'phytophthora',
+      'bacterial', 'fungal', 'viral', 'disease', 'infection', 'deficiency',
+      'chlorosis', 'yellowing', 'browning', 'dieback', 'damping'
+    ]
+    const pestNameLower = (result?.pest || '').toLowerCase()
+    const foundDiseaseWord = DISEASE_KEYWORDS.find(k => pestNameLower.includes(k))
+    if (foundDiseaseWord) {
+      console.warn(`[Pest Scan] Rejected post-parse — disease keyword "${foundDiseaseWord}" found in pest field: "${result.pest}"`)
+      return res.status(422).json({ error: 'This image appears to show a plant disease, not a pest or insect. Please use the Plant Scanner for disease detection, or upload an image that clearly shows an insect or pest.' })
     }
 
     res.json(result)
