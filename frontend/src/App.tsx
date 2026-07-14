@@ -4,7 +4,6 @@ import Home from './pages/Home'
 import Scanner from './pages/Scanner'
 import Results from './pages/Results'
 import PestFinder from './pages/PestFinder'
-import WeatherRisk from './pages/WeatherRisk'
 import { LangProvider } from './context/LangContext'
 
 export default function App() {
@@ -18,7 +17,6 @@ export default function App() {
             <Route path="/scanner" element={<Scanner />} />
             <Route path="/results/:id" element={<Results />} />
             <Route path="/pest-finder" element={<PestFinder />} />
-            <Route path="/weather-risk" element={<WeatherRisk />} />
           </Routes>
         </div>
       </BrowserRouter>

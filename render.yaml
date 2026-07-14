@@ -8,21 +8,12 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: OPENWEATHER_API_KEY
-        value: 1313100c35ccdc5eb3c46cf89075ebca
 
   - type: static
     name: plant-disease-detector-frontend
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        sync: false
     routes:
       - type: rewrite
         source: /*
